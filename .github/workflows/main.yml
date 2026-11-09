@@ -85,6 +85,11 @@ jobs:
           export/android/android_sdk_path = "/usr/local/lib/android/sdk"
           EOF
 
+      - name: Import Project Assets
+        run: |
+          # تشغيل غودوت لاستيراد كافة الأصول وتجميع السكريبتات مسبقاً لتجنب أخطاء التحميل
+          godot --headless --quit
+
       - name: Build APK with Godot
         run: |
           mkdir -p export
