@@ -28,13 +28,13 @@ jobs:
         run: |
           GODOT_VERSION=4.2.1-stable
           wget https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip
-          wget https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.export_templates.tpz
+          wget https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz
           
           unzip Godot_v${GODOT_VERSION}_linux.x86_64.zip
           mv Godot_v${GODOT_VERSION}_linux.x86_64 /usr/local/bin/godot
           
           mkdir -p ~/.local/share/godot/export_templates/${GODOT_VERSION%.*}
-          unzip Godot_v${GODOT_VERSION}_linux.x86_64.export_templates.tpz -d ~/.local/share/godot/export_templates/${GODOT_VERSION%.*}
+          unzip Godot_v${GODOT_VERSION}_export_templates.tpz -d ~/.local/share/godot/export_templates/${GODOT_VERSION%.*}
 
       - name: Create Export Preset Configuration
         run: |
