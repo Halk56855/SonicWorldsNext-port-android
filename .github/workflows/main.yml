@@ -44,7 +44,6 @@ jobs:
           unzip -q Godot_v${GODOT_VERSION}_export_templates.tpz -d temp_templates
           find temp_templates -type f -exec mv {} ~/.local/share/godot/export_templates/4.3.stable/ \;
           
-          # استخراج قالب بناء أندرويد لتمكين التصدير عبر Gradle
           mkdir -p android/build
           if [ -f ~/.local/share/godot/export_templates/4.3.stable/android_source.zip ]; then
             unzip -q ~/.local/share/godot/export_templates/4.3.stable/android_source.zip -d android/build
@@ -91,8 +90,10 @@ jobs:
         run: |
           mkdir -p ~/.config/godot
           cat << 'EOF' > ~/.config/godot/editor_settings-4.tres
+          [gd_resource type="EditorSettings" format=3]
+
           [resource]
-          export/android/android_sdk_path ="/usr/local/lib/android/sdk"
+          export/android/android_sdk_path = "/usr/local/lib/android/sdk"
           EOF
 
       - name: Build APK with Godot
