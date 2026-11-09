@@ -24,17 +24,24 @@ jobs:
         with:
           packages: platforms;android-34 build-tools;34.0.0 platform-tools
 
-      - name: Install Godot Engine
+      - name: Generate Android Debug Keystore
         run: |
-          GODOT_VERSION=4.2.1-stable
+          keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
+          mkdir -p ~/.config/godot
+          mkdir -p ~/.local/share/godot
+
+      - name: Install Godot Engine 4.3
+        run: |
+          GODOT_VERSION=4.3-stable
           wget https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip
           wget https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz
           
           unzip Godot_v${GODOT_VERSION}_linux.x86_64.zip
           mv Godot_v${GODOT_VERSION}_linux.x86_64 /usr/local/bin/godot
           
-          mkdir -p ~/.local/share/godot/export_templates/${GODOT_VERSION%.*}
-          unzip Godot_v${GODOT_VERSION}_export_templates.tpz -d ~/.local/share/godot/export_templates/${GODOT_VERSION%.*}
+          # إنشاء المجلد بالاسم الدقيق الذي يتوقعه غودوت 4.3.stable
+          mkdir -p ~/.local/share/godot/export_templates/4.3.stable
+          unzip Godot_v${GODOT_VERSION}_export_templates.tpz -d ~/.local/share/godot/export_templates/4.3.stable
 
       - name: Create Export Preset Configuration
         run: |
@@ -51,17 +58,29 @@ jobs:
           exclude_filter=""
           export_path="export/game.apk"
           patchable_packs=false
+
           [preset.0.options]
           package/unique_name="com.port.sonicworlds"
           package/app_name="Sonic Worlds Next"
           architectures/arm64-v8a=true
           architectures/armeabi-v7a=false
+          keystore/debug="debug.keystore"
+          keystore/debug_user="androiddebugkey"
+          keystore/debug_password="android"
+          EOF
+
+      - name: Configure Godot Android SDK Path
+        run: |
+          mkdir -p ~/.config/godot
+          cat << 'EOF' > ~/.config/godot/editor_settings-4.tres
+          [resource]
+          export/android/android_sdk_path ="/usr/local/lib/android/sdk"
           EOF
 
       - name: Build APK with Godot
         run: |
           mkdir -p export
-          godot --headless --export-release "Android" export/game.apk
+          godot --verbose --headless --export-release "Android" export/game.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
