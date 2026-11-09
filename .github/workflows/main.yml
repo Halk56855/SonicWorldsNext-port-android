@@ -46,7 +46,7 @@ jobs:
           find temp_templates -type f -exec mv {} ~/.local/share/godot/export_templates/4.3.stable/ \;
           rm -rf temp_templates
 
-      - name: Create Clean Export Preset
+      - name: Create Valid Export Preset
         run: |
           rm -f export_presets.cfg
           mkdir -p export
@@ -55,19 +55,36 @@ jobs:
             'name="Android"' \
             'platform="Android"' \
             'runnable=true' \
+            'dedicated_server=false' \
+            'custom_features=""' \
             'export_filter="all_resources"' \
+            'include_filter=""' \
+            'exclude_filter=""' \
             'export_path="export/game.apk"' \
+            'patchable_packs=false' \
+            'custom_template/debug=""' \
+            'custom_template/release=""' \
             '' \
             '[preset.0.options]' \
             'package/unique_name="com.port.sonicworldsnext"' \
             'package/app_name="Sonic Worlds Next"' \
+            'version/code=1' \
+            'version/name="1.0"' \
+            'screen/orientation=2' \
+            'architectures/arm64-v8a=true' \
+            'architectures/armeabi-v7a=false' \
+            'architectures/x86=false' \
+            'architectures/x86_64=false' \
             'keystore/debug="res://debug.keystore"' \
             'keystore/debug_user="androiddebugkey"' \
-            'keystore/debug_password="android"' > export_presets.cfg
+            'keystore/debug_password="android"' \
+            'keystore/release=""' \
+            'keystore/release_user=""' \
+            'keystore/release_password=""' > export_presets.cfg
 
       - name: Import Project Assets
         run: |
-          godot --headless --quit
+          godot --verbose --headless --import
 
       - name: Build APK with Godot
         run: |
