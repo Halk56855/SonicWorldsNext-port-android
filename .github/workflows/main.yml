@@ -1,0 +1,71 @@
+name: Build Godot Android APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-34' 'build-tools;34.0.0' 'platform-tools'
+
+      # تحميل وتثبيت محرك Godot بنسخة التصدير (Export Templates) بشكل تلقائي
+      - name: Install Godot Engine
+        run: |
+          GODOT_VERSION=4.2.1-stable
+          wget https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip
+          wget https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.export_templates.tpz
+          
+          unzip Godot_v${GODOT_VERSION}_linux.x86_64.zip
+          mv Godot_v${GODOT_VERSION}_linux.x86_64 /usr/local/bin/godot
+          
+          mkdir -p ~/.local/share/godot/export_templates/${GODOT_VERSION%.*}
+          unzip Godot_v${GODOT_VERSION}_linux.x86_64.export_templates.tpz -d ~/.local/share/godot/export_templates/${GODOT_VERSION%.*}
+
+      - name: Create Export Preset Configuration
+        run: |
+          mkdir -p export
+          cat << 'EOF' > export_presets.cfg
+          [preset.0]
+          name="Android"
+          platform="Android"
+          runnable=true
+          dedicated_server=false
+          custom_features=""
+          export_filter="all_resources"
+          include_filter=""
+          exclude_filter=""
+          export_path="export/game.apk"
+          patchable_packs=false
+          [preset.0.options]
+          package/unique_name="com.port.sonicworlds"
+          package/app_name="Sonic Worlds Next"
+          architectures/arm64-v8a=true
+          architectures/armeabi-v7a=false
+          EOF
+
+      - name: Build APK with Godot
+        run: |
+          mkdir -p export
+          godot --headless --export-release "Android" export/game.apk
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SonicWorldsNext-Android
+          path: export/game.apk
