@@ -39,7 +39,6 @@ jobs:
           unzip -q Godot_v${GODOT_VERSION}_linux.x86_64.zip
           mv Godot_v${GODOT_VERSION}_linux.x86_64 /usr/local/bin/godot
           
-          # فك القوالب وضبط مسارها بشكل مسطح وصحيح لغودوت 4.3
           mkdir -p ~/.local/share/godot/export_templates/4.3.stable
           mkdir -p temp_templates
           unzip -q Godot_v${GODOT_VERSION}_export_templates.tpz -d temp_templates
@@ -61,15 +60,25 @@ jobs:
           exclude_filter=""
           export_path="export/game.apk"
           patchable_packs=false
+          custom_template/debug=""
+          custom_template/release=""
 
           [preset.0.options]
           package/unique_name="com.port.sonicworlds"
           package/app_name="Sonic Worlds Next"
+          target_sdk=34
+          min_sdk=24
           architectures/arm64-v8a=true
           architectures/armeabi-v7a=false
+          architectures/x86=false
+          architectures/x86_64=false
           keystore/debug="debug.keystore"
           keystore/debug_user="androiddebugkey"
           keystore/debug_password="android"
+          keystore/release="debug.keystore"
+          keystore/release_user="androiddebugkey"
+          keystore/release_password="android"
+          gradle_build/use_gradle_build=false
           EOF
 
       - name: Configure Godot Android SDK Path
@@ -83,7 +92,7 @@ jobs:
       - name: Build APK with Godot
         run: |
           mkdir -p export
-          godot --verbose --headless --export-release "Android" export/game.apk
+          godot --verbose --headless --export-debug "Android" export/game.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
