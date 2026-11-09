@@ -30,18 +30,21 @@ jobs:
           mkdir -p ~/.config/godot
           mkdir -p ~/.local/share/godot
 
-      - name: Install Godot Engine 4.3
+      - name: Install Godot Engine 4.3 and Templates
         run: |
           GODOT_VERSION=4.3-stable
           wget https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip
           wget https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz
           
-          unzip Godot_v${GODOT_VERSION}_linux.x86_64.zip
+          unzip -q Godot_v${GODOT_VERSION}_linux.x86_64.zip
           mv Godot_v${GODOT_VERSION}_linux.x86_64 /usr/local/bin/godot
           
-          # إنشاء المجلد بالاسم الدقيق الذي يتوقعه غودوت 4.3.stable
+          # فك القوالب وضبط مسارها بشكل مسطح وصحيح لغودوت 4.3
           mkdir -p ~/.local/share/godot/export_templates/4.3.stable
-          unzip Godot_v${GODOT_VERSION}_export_templates.tpz -d ~/.local/share/godot/export_templates/4.3.stable
+          mkdir -p temp_templates
+          unzip -q Godot_v${GODOT_VERSION}_export_templates.tpz -d temp_templates
+          find temp_templates -type f -exec mv {} ~/.local/share/godot/export_templates/4.3.stable/ \;
+          rm -rf temp_templates
 
       - name: Create Export Preset Configuration
         run: |
