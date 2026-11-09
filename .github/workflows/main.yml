@@ -59,6 +59,8 @@ jobs:
             'export_path="export/game.apk"' \
             '' \
             '[preset.0.options]' \
+            'package/unique_name="com.port.sonicworldsnext"' \
+            'package/app_name="Sonic Worlds Next"' \
             'keystore/debug="res://debug.keystore"' \
             'keystore/debug_user="androiddebugkey"' \
             'keystore/debug_password="android"' > export_presets.cfg
