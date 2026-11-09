@@ -43,11 +43,6 @@ jobs:
           mkdir -p temp_templates
           unzip -q Godot_v${GODOT_VERSION}_export_templates.tpz -d temp_templates
           find temp_templates -type f -exec mv {} ~/.local/share/godot/export_templates/4.3.stable/ \;
-          
-          mkdir -p android/build
-          if [ -f ~/.local/share/godot/export_templates/4.3.stable/android_source.zip ]; then
-            unzip -q ~/.local/share/godot/export_templates/4.3.stable/android_source.zip -d android/build
-          fi
           rm -rf temp_templates
 
       - name: Create Export Preset Configuration
@@ -82,7 +77,7 @@ jobs:
           keystore/release=""
           keystore/release_user=""
           keystore/release_password=""
-          custom_build/use_custom_build=true
+          custom_build/use_custom_build=false
           EOF
 
       - name: Configure Godot Android SDK Path
