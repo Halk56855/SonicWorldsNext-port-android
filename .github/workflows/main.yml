@@ -74,9 +74,6 @@ jobs:
           keystore/debug="debug.keystore"
           keystore/debug_user="androiddebugkey"
           keystore/debug_password="android"
-          keystore/release=""
-          keystore/release_user=""
-          keystore/release_password=""
           custom_build/use_custom_build=false
           EOF
 
@@ -93,7 +90,7 @@ jobs:
       - name: Build APK with Godot
         run: |
           mkdir -p export
-          godot --verbose --headless --export-release "Android" export/game.apk
+          godot --verbose --headless --export-debug "Android" export/game.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
