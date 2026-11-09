@@ -30,8 +30,6 @@ jobs:
       - name: Generate Android Debug Keystore
         run: |
           keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
-          mkdir -p ~/.config/godot
-          mkdir -p ~/.local/share/godot
 
       - name: Install Godot Engine 4.3 and Templates
         run: |
@@ -69,6 +67,9 @@ jobs:
           [preset.0.options]
           package/unique_name="com.port.sonicworlds"
           package/app_name="Sonic Worlds Next"
+          version/code=1
+          version/name="1.0"
+          screen/orientation=0
           architectures/arm64-v8a=true
           architectures/armeabi-v7a=false
           architectures/x86=false
@@ -76,9 +77,6 @@ jobs:
           keystore/debug="res://debug.keystore"
           keystore/debug_user="androiddebugkey"
           keystore/debug_password="android"
-          keystore/release=""
-          keystore/release_user=""
-          keystore/release_password=""
           EOF
           sed -i 's/^          //' export_presets.cfg
 
