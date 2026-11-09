@@ -43,6 +43,12 @@ jobs:
           mkdir -p temp_templates
           unzip -q Godot_v${GODOT_VERSION}_export_templates.tpz -d temp_templates
           find temp_templates -type f -exec mv {} ~/.local/share/godot/export_templates/4.3.stable/ \;
+          
+          # استخراج قالب بناء أندرويد لتمكين التصدير عبر Gradle
+          mkdir -p android/build
+          if [ -f ~/.local/share/godot/export_templates/4.3.stable/android_source.zip ]; then
+            unzip -q ~/.local/share/godot/export_templates/4.3.stable/android_source.zip -d android/build
+          fi
           rm -rf temp_templates
 
       - name: Create Export Preset Configuration
@@ -78,7 +84,7 @@ jobs:
           keystore/release="debug.keystore"
           keystore/release_user="androiddebugkey"
           keystore/release_password="android"
-          gradle_build/use_gradle_build=false
+          gradle_build/use_gradle_build=true
           EOF
 
       - name: Configure Godot Android SDK Path
@@ -92,7 +98,7 @@ jobs:
       - name: Build APK with Godot
         run: |
           mkdir -p export
-          godot --verbose --headless --export-debug "Android" export/game.apk
+          godot --verbose --headless --export-release "Android" export/game.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
