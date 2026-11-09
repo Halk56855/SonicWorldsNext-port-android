@@ -48,37 +48,36 @@ jobs:
 
       - name: Create Export Preset Configuration
         run: |
+          rm -f export_presets.cfg
           mkdir -p export
-          cat << 'EOF' > export_presets.cfg
-          [preset.0]
-          name="Android"
-          platform="Android"
-          runnable=true
-          dedicated_server=false
-          custom_features=""
-          export_filter="all_resources"
-          include_filter=""
-          exclude_filter=""
-          export_path="export/game.apk"
-          patchable_packs=false
-          custom_template/debug=""
-          custom_template/release=""
-
-          [preset.0.options]
-          package/unique_name="com.port.sonicworlds"
-          package/app_name="Sonic Worlds Next"
-          version/code=1
-          version/name="1.0"
-          screen/orientation=0
-          architectures/arm64-v8a=true
-          architectures/armeabi-v7a=false
-          architectures/x86=false
-          architectures/x86_64=false
-          keystore/debug="res://debug.keystore"
-          keystore/debug_user="androiddebugkey"
-          keystore/debug_password="android"
-          EOF
-          sed -i 's/^          //' export_presets.cfg
+          printf '%s\n' \
+            '[preset.0]' \
+            'name="Android"' \
+            'platform="Android"' \
+            'runnable=true' \
+            'dedicated_server=false' \
+            'custom_features=""' \
+            'export_filter="all_resources"' \
+            'include_filter=""' \
+            'exclude_filter=""' \
+            'export_path="export/game.apk"' \
+            'patchable_packs=false' \
+            'custom_template/debug=""' \
+            'custom_template/release=""' \
+            '' \
+            '[preset.0.options]' \
+            'package/unique_name="com.port.sonicworlds"' \
+            'package/app_name="Sonic Worlds Next"' \
+            'version/code=1' \
+            'version/name="1.0"' \
+            'screen/orientation=0' \
+            'architectures/arm64-v8a=true' \
+            'architectures/armeabi-v7a=false' \
+            'architectures/x86=false' \
+            'architectures/x86_64=false' \
+            'keystore/debug="res://debug.keystore"' \
+            'keystore/debug_user="androiddebugkey"' \
+            'keystore/debug_password="android"' > export_presets.cfg
 
       - name: Import Project Assets
         run: |
