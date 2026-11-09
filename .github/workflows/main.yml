@@ -27,6 +27,12 @@ jobs:
         with:
           packages: platforms;android-34 build-tools;34.0.0 platform-tools
 
+      - name: Generate Android Debug Keystore
+        run: |
+          keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
+          mkdir -p ~/.config/godot
+          mkdir -p ~/.local/share/godot
+
       - name: Install Godot Engine 4.3 and Templates
         run: |
           GODOT_VERSION=4.3-stable
@@ -67,6 +73,9 @@ jobs:
           architectures/armeabi-v7a=false
           architectures/x86=false
           architectures/x86_64=false
+          keystore/debug="debug.keystore"
+          keystore/debug_user="androiddebugkey"
+          keystore/debug_password="android"
           EOF
           sed -i 's/^          //' export_presets.cfg
 
