@@ -62,7 +62,7 @@ jobs:
           find temp_templates -type f -exec mv {} ~/.local/share/godot/export_templates/4.3.stable/ \;
           rm -rf temp_templates
 
-      - name: Create Valid Export Preset
+      - name: Create Complete Export Preset
         run: |
           rm -f export_presets.cfg
           mkdir -p export
@@ -87,6 +87,8 @@ jobs:
             'version/code=1' \
             'version/name="1.0"' \
             'screen/orientation=2' \
+            'graphics/high_density_icons=true' \
+            'gradle/use_gradle_build=false' \
             'architectures/arm64-v8a=true' \
             'architectures/armeabi-v7a=false' \
             'architectures/x86=false' \
