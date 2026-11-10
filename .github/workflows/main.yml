@@ -50,18 +50,83 @@ jobs:
           echo "${GODOT_VERSION}.stable" > "$TEMPLATE_DIR/version.txt"
           rm -rf temp_tpz Godot_v${GODOT_VERSION}*
 
-      - name: Normalize Project File & Inject Android VRAM Compression
+      - name: Generate Pixel Touch Controls & Normalize Project
         run: |
           if [ -f "project.godot.txt" ]; then
             mv project.godot.txt project.godot
           fi
           
-          # حقن إعدادات ضغط الشاشات و VRAM المطلوبة لتجاوز خطأ ETC2/ASTC في أندرويد
+          mkdir -p Scripts/Misc Graphics/TouchControls
+
+          # توليد رسومات الأزرار البكسلية الدائرية بأسلوب Sonic Mania
+          cat << 'EOF' > generate_buttons.py
+          import os
+          from PIL import Image, ImageDraw
+
+          os.makedirs("Graphics/TouchControls", exist_ok=True)
+
+          def create_button_texture(filename, text):
+              size = (120, 120)
+              img = Image.new("RGBA", size, (0, 0, 0, 0))
+              draw = ImageDraw.Draw(img)
+              # رسم دائرة داكنة بحدود بكسلية أنيقة تشبه أزرار المنصات
+              draw.ellipse([5, 5, 115, 115], fill=(30, 30, 45, 200), outline=(80, 80, 100, 255), width=4)
+              draw.ellipse([15, 15, 105, 105], fill=(45, 45, 65, 220))
+              img.save(f"Graphics/TouchControls/{filename}.png")
+
+          create_button_texture("dpad", "")
+          create_button_texture("btn_jump", "A")
+          create_button_texture("btn_super", "S")
+          EOF
+
+          # تثبيت مكتبة الرسوميات المؤقتة لتوليد الأيقونات في الـ CI
+          python3 -m pip install Pillow > /dev/null 2>&1 || true
+          python3 generate_buttons.py
+
+          # إنشاء سكريبت الأزرار اللمسية لعرضها على الشاشة وتوصيلها بالـ Actions
+          cat << 'EOF' > Scripts/Misc/VirtualControls.gd
+          extends CanvasLayer
+
+          func _ready():
+              if DisplayServer.get_name() == "headless":
+                  return
+              
+              # زر الاتجاهات اليسار/اليمين
+              var dpad = TouchScreenButton.new()
+              if ResourceLoader.exists("res://Graphics/TouchControls/dpad.png"):
+                  dpad.normal = load("res://Graphics/TouchControls/dpad.png")
+              dpad.action = "ui_left"
+              dpad.position = Vector2(80, 450)
+              add_child(dpad)
+
+              # زر القفز (Jump / A)
+              var jump_btn = TouchScreenButton.new()
+              if ResourceLoader.exists("res://Graphics/TouchControls/btn_jump.png"):
+                  jump_btn.normal = load("res://Graphics/TouchControls/btn_jump.png")
+              jump_btn.action = "jump"
+              jump_btn.position = Vector2(1050, 450)
+              add_child(jump_btn)
+
+              # زر الحركة الخاصة (Super / S)
+              var super_btn = TouchScreenButton.new()
+              if ResourceLoader.exists("res://Graphics/TouchControls/btn_super.png"):
+                  super_btn.normal = load("res://Graphics/TouchControls/btn_super.png")
+              super_btn.action = "spindash"
+              super_btn.position = Vector2(1050, 300)
+              add_child(super_btn)
+          EOF
+
+          # حقن إعدادات VRAM والـ Autoload في ملف مشروع غودوت
           if ! grep -q "rendering/textures/vram_compression/import_etc2_astc" project.godot; then
             echo "" >> project.godot
             echo "[rendering]" >> project.godot
-            echo "" >> project.godot
             echo "textures/vram_compression/import_etc2_astc=true" >> project.godot
+          fi
+
+          if ! grep -q "VirtualControls" project.godot; then
+            echo "" >> project.godot
+            echo "[autoload]" >> project.godot
+            echo "VirtualControls=\"*res://Scripts/Misc/VirtualControls.gd\"" >> project.godot
           fi
 
       - name: Generate Clean Export Preset
@@ -104,7 +169,7 @@ jobs:
           keystore/release_password=""
           EOF
 
-      - name: Build APK with Godot 4.7.2
+      - name: Build APK with Godot 4.7.2 (Headless)
         run: |
           godot --verbose --headless --import
           godot --verbose --headless --export-debug "Android" export/game.apk
