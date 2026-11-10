@@ -88,7 +88,7 @@ jobs:
             'version/name="1.0"' \
             'screen/orientation=2' \
             'graphics/high_density_icons=true' \
-            'gradle/use_gradle_build=false' \
+            'gradle/use_gradle_build=true' \
             'architectures/arm64-v8a=true' \
             'architectures/armeabi-v7a=false' \
             'architectures/x86=false' \
