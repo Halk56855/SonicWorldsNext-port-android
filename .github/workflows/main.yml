@@ -49,7 +49,7 @@ jobs:
             '' \
             '[resource]' \
             'export/android/android_sdk_path = "/usr/local/lib/android/sdk"' \
-            'export/android/debug_keystore = "res://debug.keystore"' \
+            'export/android/debug_keystore_path = "res://debug.keystore"' \
             'export/android/debug_keystore_user = "androiddebugkey"' \
             'export/android/debug_keystore_pass = "android"' > ~/.config/godot/editor_settings-4.tres
 
@@ -73,11 +73,9 @@ jobs:
 
       - name: Ensure Valid Project Configuration
         run: |
-          # التأكد من وجود إعدادات التطبيق الأساسية في مشروع غودوت
           if [ ! -f "project.godot" ]; then
             touch project.godot
           fi
-          # إضافة إعدادات التكوين الأساسية إذا لم تكن موجودة لمنع أخطاء _fs_changed
           if ! grep -q "config/name" project.godot; then
             echo -e '[application]\n\nconfig/name="Sonic Worlds Next"\nconfig/icon="res://icon.svg"' >> project.godot
           fi
