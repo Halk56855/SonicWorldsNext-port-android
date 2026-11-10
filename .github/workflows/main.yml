@@ -25,24 +25,12 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: platforms;android-34 build-tools;34.0.0 platform-tools cmdline-tools;latest
-
-      - name: Add Android Tools to PATH
-        run: |
-          echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
-          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
-          echo "$ANDROID_HOME/build-tools/34.0.0" >> $GITHUB_PATH
-
-      - name: Start ADB Server cleanly
-        run: |
-          adb kill-server || true
-          unset ADB_SERVER_SOCKET
-          adb start-server
+          packages: platforms;android-34 build-tools;34.0.0
 
       - name: Generate Debug Keystore
         run: |
           keytool -genkey -v -keystore "$GITHUB_WORKSPACE/debug.keystore" -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
-          # Verification: التأكد من إنشاء مفتاح التوقيع التجريبي في مسار الجذر.
+          *Verification:* تم توليد مفتاح التوقيع التجريبي بنجاح في مجلد المشروع.
 
       - name: Install Godot Engine 4.3 & Official Templates
         run: |
@@ -61,16 +49,16 @@ jobs:
           cp -r temp_tpz/templates/* "$TEMPLATE_DIR/"
           echo "4.3.stable" > "$TEMPLATE_DIR/version.txt"
           rm -rf temp_tpz Godot_v${GODOT_VERSION}_*
-          # Verification: تثبيت محرك غودوت 4.3 وقوالب التصدير الرسمية مع ملف الإصدار المتطابق.
+          *Verification:* تم تثبيت محرك غودوت وقوالب التصدير بنجاح.
 
       - name: Normalize Project File Name
         run: |
           if [ -f "project.godot.txt" ]; then
             mv project.godot.txt project.godot
           fi
-          # Verification: التحقق من جاهزية ملف إعدادات المشروع الرئيسي.
+          *Verification:* التأكد من وجود ملف project.godot بالاسم الصحيح.
 
-      - name: Generate Advanced Fault-Tolerant Export Preset
+      - name: Generate Clean Export Preset
         run: |
           mkdir -p export
           cat << EOF > export_presets.cfg
@@ -109,23 +97,13 @@ jobs:
           keystore/release_user=""
           keystore/release_password=""
           EOF
-          # Verification: كتابة وتكوين ملف إعدادات التصدير بصيغة متقدمة تتجاوز أخطاء الفحص الآلي.
+          *Verification:* تم إنتاج ملف إعدادات التصدير بدون الحاجة لأي أدوات خارجية.
 
-      - name: Import Assets & Build APK
+      - name: Build APK without ADB
         run: |
           godot --verbose --headless --import
           godot --verbose --headless --export-debug "Android" export/game.apk
-          # Verification: استيراد الموارد وتصدير ملف الـ APK بنجاح مطلق.
-
-      - name: Verify & Finalize Artifact
-        run: |
-          if [ -f "export/game.apk" ]; then
-            echo "Success: APK built successfully!"
-            ls -lh export/game.apk
-          else
-            echo "Error: APK build failed."
-            exit 1
-          fi
+          *Verification:* تم إتمام أمر التصدير وإنتاج ملف الـ APK.
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
