@@ -38,7 +38,11 @@ jobs:
           adb start-server
           adb devices
 
-      - name: Configure Godot Editor Settings for Android SDK
+      - name: Generate Android Debug Keystore
+        run: |
+          keytool -genkey -v -keystore $GITHUB_WORKSPACE/debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Configure Godot Editor Settings for Android & JDK
         run: |
           mkdir -p ~/.config/godot
           printf '%s\n' \
@@ -46,7 +50,10 @@ jobs:
             '' \
             '[resource]' \
             'export/android/android_sdk_path = "/usr/local/lib/android/sdk"' \
-            'export/android/java_sdk_path = "'"$JAVA_HOME"'"' > ~/.config/godot/editor_settings-4.tres
+            'export/android/java_sdk_path = "'"$JAVA_HOME"'"' \
+            'export/android/debug_keystore = "'"$GITHUB_WORKSPACE/debug.keystore"'"' \
+            'export/android/debug_keystore_user = "androiddebugkey"' \
+            'export/android/debug_keystore_pass = "android"' > ~/.config/godot/editor_settings-4.tres
 
       - name: Install Godot Engine 4.3 and Templates
         run: |
@@ -69,7 +76,7 @@ jobs:
           ls -la ~/.local/share/godot/export_templates/4.3.stable/
           rm -rf temp_tpz
 
-      - name: Ensure Valid Project Configuration
+      - name: Ensure Valid Project Configuration and Icon
         run: |
           if [ ! -f "project.godot" ]; then
             touch project.godot
@@ -77,8 +84,16 @@ jobs:
           if ! grep -q "config/name" project.godot; then
             echo -e '[application]\n\nconfig/name="Sonic Worlds Next"\nconfig/icon="res://icon.svg"' >> project.godot
           fi
+          # توفير ملف أيقونة افتراضي لمنع أخطاء توليد الأيقونات عالية الكثافة
+          if [ ! -f "icon.svg" ]; then
+            cat << 'EOF' > icon.svg
+<svg height="128" width="128" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="64" cy="64" r="60" fill="#3366cc" />
+</svg>
+EOF
+          fi
 
-      - name: Create Clean Godot 4.3 Export Preset
+      - name: Create Complete Godot 4.3 Export Preset
         run: |
           rm -f export_presets.cfg
           mkdir -p export
@@ -108,9 +123,9 @@ jobs:
             'architectures/armeabi-v7a=false' \
             'architectures/x86=false' \
             'architectures/x86_64=false' \
-            'keystore/debug=""' \
-            'keystore/debug_user=""' \
-            'keystore/debug_password=""' \
+            'keystore/debug="res://debug.keystore"' \
+            'keystore/debug_user="androiddebugkey"' \
+            'keystore/debug_password="android"' \
             'keystore/release=""' \
             'keystore/release_user=""' \
             'keystore/release_password=""' > export_presets.cfg
