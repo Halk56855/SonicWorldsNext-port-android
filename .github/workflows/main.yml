@@ -50,50 +50,52 @@ jobs:
           echo "${GODOT_VERSION}.stable" > "$TEMPLATE_DIR/version.txt"
           rm -rf temp_tpz Godot_v${GODOT_VERSION}*
 
-      - name: Create Real Scene Touch Controls & Inject into Project
+      - name: Download External Buttons Pack & Inject Touch Controls
         run: |
           if [ -f "project.godot.txt" ]; then
             mv project.godot.txt project.godot
           fi
           
-          mkdir -p Scenes Scripts Graphics/TouchControls
+          mkdir -p Scripts/Misc Graphics/TouchControls
 
-          # 1. إنشاء صور الأزرار المرئية
-          cat << 'EOF' > generate_buttons.py
+          # 1. تحميل حزمة الأزرار الخارجية التي أرسلتها وفك ضغطها واستخراج الصور منها
+          wget -q "https://filecache37.gamebanana.com/mods/refined_mtc_3f59c.zip" -O controls.zip
+          unzip -o controls.zip -d extracted_controls/ || true
+          
+          # نقل أي صور أو أيقونات تم العثور عليها إلى مجلد الرسوميات الخاص باللعبة
+          find extracted_controls/ -type f \( -name "*.png" -o -name "*.webp" \) -exec cp {} Graphics/TouchControls/ \;
+          rm -rf controls.zip extracted_controls
+
+          # 2. توليد صور احتياطية للأزرار في حال لم تكن الصور مطابقة بالأسماء، لضمان ظهورها 100%
+          cat << 'EOF' > generate_fallback.py
           import os
           from PIL import Image, ImageDraw
 
           os.makedirs("Graphics/TouchControls", exist_ok=True)
 
-          def create_btn_img(filename, label):
-              if filename == "btn_start":
-                  size = (300, 100)
-              else:
-                  size = (140, 140)
-              
-              img = Image.new("RGBA", size, (0, 0, 0, 0))
-              draw = ImageDraw.Draw(img)
-              
-              if filename == "btn_start":
-                  draw.rectangle([5, 5, 295, 95], fill=(20, 20, 40, 240), outline=(255, 255, 255, 255), width=6)
-                  draw.rectangle([12, 12, 288, 88], fill=(60, 60, 110, 250))
-              else:
-                  draw.ellipse([5, 5, 135, 135], fill=(20, 20, 40, 240), outline=(255, 255, 255, 255), width=6)
-                  draw.ellipse([15, 15, 125, 125], fill=(60, 60, 110, 250))
-                  
-              img.save(f"Graphics/TouchControls/{filename}.png")
+          def create_btn(filename, label):
+              path = f"Graphics/TouchControls/{filename}.png"
+              if not os.path.exists(path):
+                  size = (300, 100) if filename == "btn_start" else (130, 130)
+                  img = Image.new("RGBA", size, (0, 0, 0, 0))
+                  draw = ImageDraw.Draw(img)
+                  if filename == "btn_start":
+                      draw.rectangle([5, 5, 295, 95], fill=(20, 20, 40, 240), outline=(255, 255, 255, 255), width=5)
+                  else:
+                      draw.ellipse([5, 5, 125, 125], fill=(20, 20, 40, 240), outline=(255, 255, 255, 255), width=5)
+                  img.save(path)
 
-          create_btn_img("btn_left", "◄")
-          create_btn_img("btn_right", "►")
-          create_btn_img("btn_jump", "A")
-          create_btn_img("btn_start", "PRESS START")
+          create_btn("btn_left", "◄")
+          create_btn("btn_right", "►")
+          create_btn("btn_jump", "A")
+          create_btn("btn_start", "START")
           EOF
 
           python3 -m pip install Pillow > /dev/null 2>&1 || true
-          python3 generate_buttons.py
+          python3 generate_fallback.py
 
-          # 2. إنشاء ملف سكربت التحكم الفعلي
-          cat << 'EOF' > Scripts/TouchControls.gd
+          # 3. إنشاء سكربت التحكم وتثبيته كـ Autoload لضمان ظهوره فوق شاشة Press Start وتجاوزها
+          cat << 'EOF' > Scripts/Misc/VirtualControls.gd
           extends CanvasLayer
 
           func _ready():
@@ -102,16 +104,20 @@ jobs:
               
               layer = 128
               
-              var control = Control.new()
-              control.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-              control.mouse_filter = Control.MOUSE_FILTER_IGNORE
-              add_child(control)
+              var control_node = Control.new()
+              control_node.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+              control_node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+              add_child(control_node)
 
-              control.add_child(make_button("res://Graphics/TouchControls/btn_left.png", Vector2(50, 400), "ui_left"))
-              control.add_child(make_button("res://Graphics/TouchControls/btn_right.png", Vector2(200, 400), "ui_right"))
-              control.add_child(make_button("res://Graphics/TouchControls/btn_jump.png", Vector2(980, 400), "jump"))
+              # زر اليسار
+              control_node.add_child(create_btn("res://Graphics/TouchControls/btn_left.png", Vector2(50, 400), "ui_left"))
+              # زر اليمين
+              control_node.add_child(create_btn("res://Graphics/TouchControls/btn_right.png", Vector2(190, 400), "ui_right"))
+              # زر القفز (A)
+              control_node.add_child(create_btn("res://Graphics/TouchControls/btn_jump.png", Vector2(980, 400), "jump"))
               
-              var start_btn = make_button("res://Graphics/TouchControls/btn_start.png", Vector2(370, 480), "ui_accept")
+              # زر الـ START الكبير في المنتصف لتجاوز شاشة المقدمة
+              var start_btn = create_btn("res://Graphics/TouchControls/btn_start.png", Vector2(380, 480), "ui_accept")
               start_btn.button_down.connect(func():
                   var ev = InputEventKey.new()
                   ev.keycode = KEY_ENTER
@@ -124,39 +130,34 @@ jobs:
                   ev.pressed = false
                   Input.parse_input_event(ev)
               )
-              control.add_child(start_btn)
+              control_node.add_child(start_btn)
 
-          func make_button(tex_path: String, pos: Vector2, action: String) -> TextureButton:
+          func create_btn(tex_path: String, pos: Vector2, action_name: String) -> TextureButton:
               var btn = TextureButton.new()
               if ResourceLoader.exists(tex_path):
                   btn.texture_normal = load(tex_path)
               btn.position = pos
-              btn.button_down.connect(func(): Input.action_press(action))
-              btn.button_up.connect(func(): Input.action_release(action))
+              
+              btn.button_down.connect(func():
+                  Input.action_press(action_name)
+              )
+              btn.button_up.connect(func():
+                  Input.action_release(action_name)
+              )
               return btn
           EOF
 
-          # 3. إنشاء مشهد Godot حقيقي (.tscn) يربط السكريبت تلقائياً
-          cat << 'EOF' > Scenes/TouchControls.tscn
-          [gd_scene load_steps=2 format=3]
-
-          [ext_resource type="Script" path="res://Scripts/TouchControls.gd" id="1_ctrl"]
-
-          [node name="TouchControls" type="CanvasLayer"]
-          script = ExtResource("1_ctrl")
-          EOF
-
-          # 4. ربط المشهد كـ Autoload في ملف إعدادات المشروع لضمان ظهوره دائماً
+          # 4. تفعيل إعدادات الضغط والـ Autoload في ملف إعدادات غودوت
           if ! grep -q "rendering/textures/vram_compression/import_etc2_astc" project.godot; then
             echo "" >> project.godot
             echo "[rendering]" >> project.godot
             echo "textures/vram_compression/import_etc2_astc=true" >> project.godot
           fi
 
-          if ! grep -q "TouchControls" project.godot; then
+          if ! grep -q "VirtualControls" project.godot; then
             echo "" >> project.godot
             echo "[autoload]" >> project.godot
-            echo "TouchControls=\"*res://Scenes/TouchControls.tscn\"" >> project.godot
+            echo "VirtualControls=\"*res://Scripts/Misc/VirtualControls.gd\"" >> project.godot
           fi
 
       - name: Generate Clean Export Preset
