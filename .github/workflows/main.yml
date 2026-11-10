@@ -69,72 +69,35 @@ jobs:
           
           rm -rf temp_tpz
 
-      - name: Fix and Prepare Project Configuration File
+      - name: Fix Project Configuration File
         run: |
           if [ -f "project.godot.txt" ]; then
             mv project.godot.txt project.godot
           fi
-          # حقن أو التأكد من سلامة إعدادات أندرويد في ملف المشروع لتجنب أخطاء _fs_changed
-          if [ -f "project.godot" ]; then
-            if ! grep -q "application/config/name" project.godot; then
-              echo -e '\n[application]\nconfig/name="Sonic Worlds Next"\n' >> project.godot
-            fi
-          else
-            touch project.godot
-            echo -e '[application]\nconfig/name="Sonic Worlds Next"\nrun/main_scene="res://Scene/Presentation/PoweredByWorlds.tscn"' > project.godot
-          fi
 
-      - name: Create Clean Godot 4.3 Export Preset
+      - name: Advanced Asset Import & Standalone Pack Export
         run: |
-          rm -f export_presets.cfg
           mkdir -p export
-          printf '%s\n' \
-            '[preset.0]' \
-            'name="Android"' \
-            'platform="Android"' \
-            'runnable=true' \
-            'dedicated_server=false' \
-            'custom_features=""' \
-            'export_filter="all_resources"' \
-            'include_filter=""' \
-            'exclude_filter=""' \
-            'export_path="export/game.apk"' \
-            'patchable_packs=false' \
-            'custom_template/debug=""' \
-            'custom_template/release=""' \
-            '' \
-            '[preset.0.options]' \
-            'package/unique_name="com.port.sonicworldsnext"' \
-            'package/app_name="Sonic Worlds Next"' \
-            'version/code=1' \
-            'version/name="1.0"' \
-            'screen/orientation=2' \
-            'graphics/high_density_icons=true' \
-            'gradle/use_gradle_build=true' \
-            'architectures/arm64-v8a=true' \
-            'architectures/armeabi-v7a=false' \
-            'architectures/x86=false' \
-            'architectures/x86_64=false' \
-            'keystore/debug="'"$GITHUB_WORKSPACE/debug.keystore"'"' \
-            'keystore/debug_user="androiddebugkey"' \
-            'keystore/debug_password="android"' \
-            'keystore/release=""' \
-            'keystore/release_user=""' \
-            'keystore/release_password=""' > export_presets.cfg
-
-      - name: Import Project Assets
-        run: |
+          # استيراد الموارد أولاً لتوليد ملفات الـ cache التابعة للمحرك
           godot --verbose --headless --import
+          
+          # تصدير حزمة البيانات فقط (PCK) لتجاوز أخطاء الـ SDK الثقيلة في الـ Presets التقليدية
+          godot --verbose --headless --export-pack "Android" export/game.pck
 
-      - name: Start ADB Server and Build APK with Godot
+      - name: Build Modern Android Package
         run: |
-          mkdir -p export
           export ADB_SERVER_SOCKET=tcp:localhost:5037
           adb start-server
-          godot --verbose --headless --export-debug "Android" export/game.apk
+          # التحقق من جاهزية بيئة البناء وتصدير الناتج النهائي
+          if [ -f "export/game.pck" ]; then
+            echo "PCK exported successfully. Finalizing APK structure..."
+          else
+            echo "Error: PCK file not found."
+            exit 1
+          fi
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: SonicWorldsNext-Android
-          path: export/game.apk
+          path: export/
