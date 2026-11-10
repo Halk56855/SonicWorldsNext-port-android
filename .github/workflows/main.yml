@@ -67,12 +67,12 @@ jobs:
           mkdir -p temp_templates
           unzip -q Godot_v${GODOT_VERSION}_export_templates.tpz -d temp_templates
           
-          # تصحيح مسار النسخ لنقل الملفات من جذر المجلد المؤقت مباشرة
-          cp -r temp_templates/* ~/.local/share/godot/export_templates/4.3.stable/
-          cp -r temp_templates/* ~/.local/share/godot/export_templates/4.3.stable.official/
+          # تصحيح النسخ بنقل محتويات مجلد templates المؤقت مباشرة إلى جذر مجلدات القوالب
+          cp -r temp_templates/templates/* ~/.local/share/godot/export_templates/4.3.stable/
+          cp -r temp_templates/templates/* ~/.local/share/godot/export_templates/4.3.stable.official/
           rm -rf temp_templates
           
-          # التحقق من وجود الملفات في مسار القوالب
+          # التحقق من وجود الملفات في المسار الصحيح
           ls -la ~/.local/share/godot/export_templates/4.3.stable/
 
       - name: Ensure Valid Project Configuration
