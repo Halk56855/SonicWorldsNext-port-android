@@ -71,6 +71,17 @@ jobs:
           cp -r temp_templates/templates/* ~/.local/share/godot/export_templates/4.3.stable.official/
           rm -rf temp_templates
 
+      - name: Ensure Valid Project Configuration
+        run: |
+          # التأكد من وجود إعدادات التطبيق الأساسية في مشروع غودوت
+          if [ ! -f "project.godot" ]; then
+            touch project.godot
+          fi
+          # إضافة إعدادات التكوين الأساسية إذا لم تكن موجودة لمنع أخطاء _fs_changed
+          if ! grep -q "config/name" project.godot; then
+            echo -e '[application]\n\nconfig/name="Sonic Worlds Next"\nconfig/icon="res://icon.svg"' >> project.godot
+          fi
+
       - name: Create Complete Godot 4.3 Export Preset
         run: |
           rm -f export_presets.cfg
@@ -108,7 +119,6 @@ jobs:
             'keystore/release=""' \
             'keystore/release_user=""' \
             'keystore/release_password=""' > export_presets.cfg
-          cat export_presets.cfg
 
       - name: Import Project Assets
         run: |
