@@ -34,7 +34,6 @@ jobs:
 
       - name: Start and Verify ADB Server
         run: |
-          export ADB_SERVER_SOCKET=tcp:localhost:5037
           adb start-server
           adb devices
 
@@ -131,6 +130,8 @@ jobs:
       - name: Build APK with Godot
         run: |
           mkdir -p export
+          # توجيه اتصال ADB لمنع خطأ الاتصال بالخادم أثناء التصدير الرأسي
+          export ADB_SERVER_SOCKET=tcp:127.0.0.1:5037
           godot --verbose --headless --export-debug "Android" export/game.apk
 
       - name: Upload APK Artifact
