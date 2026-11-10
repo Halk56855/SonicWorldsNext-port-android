@@ -31,14 +31,12 @@ jobs:
         run: |
           echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
           echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
-          # Verification: التأكد من إضافة مسارات أدوات الأندرويد إلى متغير PATH.
 
       - name: Generate Android Debug Keystore
         run: |
           keytool -genkey -v -keystore $GITHUB_WORKSPACE/debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
-          # Verification: التحقق من توليد ملف debug.keystore بنجاح.
 
-      - name: Configure Godot Global Editor Settings for Android & JDK
+      - name: Configure Godot Global Editor Settings
         run: |
           mkdir -p ~/.config/godot
           printf '%s\n' \
@@ -46,11 +44,7 @@ jobs:
             '' \
             '[resource]' \
             'export/android/android_sdk_path = "/usr/local/lib/android/sdk"' \
-            'export/android/java_sdk_path = "'"$JAVA_HOME"'"' \
-            'export/android/debug_keystore = "'"$GITHUB_WORKSPACE/debug.keystore"'"' \
-            'export/android/debug_keystore_user = "androiddebugkey"' \
-            'export/android/debug_keystore_pass = "android"' > ~/.config/godot/editor_settings-4.tres
-          # Verification: كتابة مسارات الأندرويد ومفتاح التوقيع في إعدادات المحرر.
+            'export/android/java_sdk_path = "'"$JAVA_HOME"'"' > ~/.config/godot/editor_settings-4.tres
 
       - name: Install Godot Engine 4.3 and Templates
         run: |
@@ -74,22 +68,18 @@ jobs:
           echo "4.3.stable.official" > ~/.local/share/godot/export_templates/4.3.stable.official/version.txt
           
           rm -rf temp_tpz
-          # Verification: تثبيت القوالب وملف version.txt بنجاح.
 
-      - name: Ensure Valid Project Configuration and Icon
+      - name: Ensure Project File Integrity
         run: |
+          if [ -f "project.godot.txt" ] && [ ! -f "project.godot" ]; then
+            mv project.godot.txt project.godot
+          fi
           if [ ! -f "project.godot" ]; then
             touch project.godot
+            echo -e '[application]\n\nconfig/name="Sonic Worlds Next"\nrun/main_scene="res://Scene/Presentation/PoweredByWorlds.tscn"\nconfig/icon="res://icon.png"' >> project.godot
           fi
-          if ! grep -q "config/name" project.godot; then
-            echo -e '[application]\n\nconfig/name="Sonic Worlds Next"\nconfig/icon="res://icon.svg"' >> project.godot
-          fi
-          if [ ! -f "icon.svg" ]; then
-            echo '<svg height="128" width="128" xmlns="http://www.w3.org/2000/svg"><circle cx="64" cy="64" r="60" fill="#3366cc"/></svg>' > icon.svg
-          fi
-          # Verification: التأكد من توفر ملفات التكوين الأساسية وأيقونة المشروع.
 
-      - name: Create Standard Godot 4.3 Export Preset
+      - name: Create Godot 4.3 Export Preset Config
         run: |
           rm -f export_presets.cfg
           mkdir -p export
@@ -120,18 +110,16 @@ jobs:
             'architectures/armeabi-v7a=false' \
             'architectures/x86=false' \
             'architectures/x86_64=false' \
-            'keystore/debug=""' \
-            'keystore/debug_user=""' \
-            'keystore/debug_password=""' \
+            'keystore/debug="'"$GITHUB_WORKSPACE/debug.keystore"'"' \
+            'keystore/debug_user="androiddebugkey"' \
+            'keystore/debug_password="android"' \
             'keystore/release=""' \
             'keystore/release_user=""' \
             'keystore/release_password=""' > export_presets.cfg
-          # Verification: توليد ملف export_presets.cfg بخيارات كاملة وتجنب أخطاء الفحص.
 
       - name: Import Project Assets
         run: |
           godot --verbose --headless --import
-          # Verification: استيراد موارد المشروع بدون أخطاء.
 
       - name: Start ADB Server and Build APK with Godot
         run: |
@@ -139,7 +127,6 @@ jobs:
           export ADB_SERVER_SOCKET=tcp:localhost:5037
           adb start-server
           godot --verbose --headless --export-debug "Android" export/game.apk
-          # Verification: بدء تشغيل خادم ADB وتصدير وبناء ملف APK بنجاح.
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
