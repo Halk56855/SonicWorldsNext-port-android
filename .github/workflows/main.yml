@@ -62,10 +62,14 @@ jobs:
           unzip -q Godot_v${GODOT_VERSION}_linux.x86_64.zip
           mv Godot_v${GODOT_VERSION}_linux.x86_64 /usr/local/bin/godot
           
+          # إنشاء مسارات القوالب بالصيغتين لضمان مطابقة الإصدار الرسمي
           mkdir -p ~/.local/share/godot/export_templates/4.3.stable
+          mkdir -p ~/.local/share/godot/export_templates/4.3.stable.official
           mkdir -p temp_templates
           unzip -q Godot_v${GODOT_VERSION}_export_templates.tpz -d temp_templates
-          find temp_templates -type f -exec mv {} ~/.local/share/godot/export_templates/4.3.stable/ \;
+          
+          cp -r temp_templates/templates/* ~/.local/share/godot/export_templates/4.3.stable/
+          cp -r temp_templates/templates/* ~/.local/share/godot/export_templates/4.3.stable.official/
           rm -rf temp_templates
 
       - name: Create Clean and Valid Export Preset
