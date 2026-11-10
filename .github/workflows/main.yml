@@ -69,17 +69,22 @@ jobs:
           
           rm -rf temp_tpz
 
-      - name: Ensure Project File Integrity
+      - name: Fix and Prepare Project Configuration File
         run: |
-          if [ -f "project.godot.txt" ] && [ ! -f "project.godot" ]; then
+          if [ -f "project.godot.txt" ]; then
             mv project.godot.txt project.godot
           fi
-          if [ ! -f "project.godot" ]; then
+          # حقن أو التأكد من سلامة إعدادات أندرويد في ملف المشروع لتجنب أخطاء _fs_changed
+          if [ -f "project.godot" ]; then
+            if ! grep -q "application/config/name" project.godot; then
+              echo -e '\n[application]\nconfig/name="Sonic Worlds Next"\n' >> project.godot
+            fi
+          else
             touch project.godot
-            echo -e '[application]\n\nconfig/name="Sonic Worlds Next"\nrun/main_scene="res://Scene/Presentation/PoweredByWorlds.tscn"\nconfig/icon="res://icon.png"' >> project.godot
+            echo -e '[application]\nconfig/name="Sonic Worlds Next"\nrun/main_scene="res://Scene/Presentation/PoweredByWorlds.tscn"' > project.godot
           fi
 
-      - name: Create Godot 4.3 Export Preset Config
+      - name: Create Clean Godot 4.3 Export Preset
         run: |
           rm -f export_presets.cfg
           mkdir -p export
