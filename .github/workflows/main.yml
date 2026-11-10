@@ -50,10 +50,18 @@ jobs:
           echo "${GODOT_VERSION}.stable" > "$TEMPLATE_DIR/version.txt"
           rm -rf temp_tpz Godot_v${GODOT_VERSION}*
 
-      - name: Normalize Project File Name
+      - name: Normalize Project File & Inject Android VRAM Compression
         run: |
           if [ -f "project.godot.txt" ]; then
             mv project.godot.txt project.godot
+          fi
+          
+          # حقن إعدادات ضغط الشاشات و VRAM المطلوبة لتجاوز خطأ ETC2/ASTC في أندرويد
+          if ! grep -q "rendering/textures/vram_compression/import_etc2_astc" project.godot; then
+            echo "" >> project.godot
+            echo "[rendering]" >> project.godot
+            echo "" >> project.godot
+            echo "textures/vram_compression/import_etc2_astc=true" >> project.godot
           fi
 
       - name: Generate Clean Export Preset
