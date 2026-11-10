@@ -30,7 +30,6 @@ jobs:
       - name: Generate Debug Keystore
         run: |
           keytool -genkey -v -keystore "$GITHUB_WORKSPACE/debug.keystore" -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
-          *Verification:* تم توليد مفتاح التوقيع التجريبي بنجاح في مجلد المشروع.
 
       - name: Install Godot Engine 4.3 & Official Templates
         run: |
@@ -49,14 +48,12 @@ jobs:
           cp -r temp_tpz/templates/* "$TEMPLATE_DIR/"
           echo "4.3.stable" > "$TEMPLATE_DIR/version.txt"
           rm -rf temp_tpz Godot_v${GODOT_VERSION}_*
-          *Verification:* تم تثبيت محرك غودوت وقوالب التصدير بنجاح.
 
       - name: Normalize Project File Name
         run: |
           if [ -f "project.godot.txt" ]; then
             mv project.godot.txt project.godot
           fi
-          *Verification:* التأكد من وجود ملف project.godot بالاسم الصحيح.
 
       - name: Generate Clean Export Preset
         run: |
@@ -97,13 +94,11 @@ jobs:
           keystore/release_user=""
           keystore/release_password=""
           EOF
-          *Verification:* تم إنتاج ملف إعدادات التصدير بدون الحاجة لأي أدوات خارجية.
 
       - name: Build APK without ADB
         run: |
           godot --verbose --headless --import
           godot --verbose --headless --export-debug "Android" export/game.apk
-          *Verification:* تم إتمام أمر التصدير وإنتاج ملف الـ APK.
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
