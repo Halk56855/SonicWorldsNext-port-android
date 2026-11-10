@@ -119,8 +119,14 @@ jobs:
             'architectures/arm64-v8a=true' \
             'architectures/armeabi-v7a=false' \
             'architectures/x86=false' \
-            'architectures/x86_64=false' > export_presets.cfg
-          # Verification: توليد ملف export_presets.cfg متضمناً خيار تفعيل Gradle.
+            'architectures/x86_64=false' \
+            'keystore/debug=""' \
+            'keystore/debug_user=""' \
+            'keystore/debug_password=""' \
+            'keystore/release=""' \
+            'keystore/release_user=""' \
+            'keystore/release_password=""' > export_presets.cfg
+          # Verification: توليد ملف export_presets.cfg بخيارات كاملة وتجنب أخطاء الفحص.
 
       - name: Import Project Assets
         run: |
