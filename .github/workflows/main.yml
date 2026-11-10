@@ -62,21 +62,21 @@ jobs:
           unzip -q Godot_v${GODOT_VERSION}_linux.x86_64.zip
           mv Godot_v${GODOT_VERSION}_linux.x86_64 /usr/local/bin/godot
           
-          # إنشاء مجلدات قوالب غودوت بالصيغتين
+          # إنشاء مجلدات قوالب غودوت بالصيغتين المطلوبة للإصدار
           mkdir -p ~/.local/share/godot/export_templates/4.3.stable
           mkdir -p ~/.local/share/godot/export_templates/4.3.stable.official
-          mkdir -p temp_templates
-          unzip -q Godot_v${GODOT_VERSION}_export_templates.tpz -d temp_templates
           
-          # البحث التلقائي عن قوالب أندرويد ونسخها بالأسماء القياسية المطلوبة للمحرك
-          find temp_templates -name "android_debug.apk" -exec cp {} ~/.local/share/godot/export_templates/4.3.stable/ \;
-          find temp_templates -name "android_release.apk" -exec cp {} ~/.local/share/godot/export_templates/4.3.stable/ \;
+          # فك ضغط ملف الـ tpz واستخراج محتوياته مباشرة
+          mkdir -p temp_tpz
+          unzip -q Godot_v${GODOT_VERSION}_export_templates.tpz -d temp_tpz
           
-          cp ~/.local/share/godot/export_templates/4.3.stable/* ~/.local/share/godot/export_templates/4.3.stable.official/
+          # النسخ المباشر للملفات المستخرجة إلى مسار القوالب
+          cp -r temp_tpz/templates/* ~/.local/share/godot/export_templates/4.3.stable/ || cp -r temp_tpz/* ~/.local/share/godot/export_templates/4.3.stable/
+          cp -r ~/.local/share/godot/export_templates/4.3.stable/* ~/.local/share/godot/export_templates/4.3.stable.official/
           
-          # التحقق من وجود الملفات المطلوبة في المسار النهائي
+          # التحقق البصري من وجود ملفات القوالب في السجلات
           ls -la ~/.local/share/godot/export_templates/4.3.stable/
-          rm -rf temp_templates
+          rm -rf temp_tpz
 
       - name: Ensure Valid Project Configuration
         run: |
