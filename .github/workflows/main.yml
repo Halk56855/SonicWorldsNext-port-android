@@ -34,6 +34,7 @@ jobs:
 
       - name: Start and Verify ADB Server
         run: |
+          export ADB_SERVER_SOCKET=tcp:localhost:5037
           adb start-server
           adb devices
 
@@ -62,19 +63,18 @@ jobs:
           unzip -q Godot_v${GODOT_VERSION}_linux.x86_64.zip
           mv Godot_v${GODOT_VERSION}_linux.x86_64 /usr/local/bin/godot
           
-          # إنشاء مجلدات قوالب غودوت بالصيغتين المطلوبة للإصدار
+          # إعداد مسارات القوالب بالصيغة الرسمية لغودوت 4.3
           mkdir -p ~/.local/share/godot/export_templates/4.3.stable
           mkdir -p ~/.local/share/godot/export_templates/4.3.stable.official
           
-          # فك ضغط ملف الـ tpz واستخراج محتوياته مباشرة
           mkdir -p temp_tpz
           unzip -q Godot_v${GODOT_VERSION}_export_templates.tpz -d temp_tpz
           
-          # النسخ المباشر للملفات المستخرجة إلى مسار القوالب
-          cp -r temp_tpz/templates/* ~/.local/share/godot/export_templates/4.3.stable/ || cp -r temp_tpz/* ~/.local/share/godot/export_templates/4.3.stable/
+          # نقل محتويات القوالب بالطريقة الصحيحة والمباشرة
+          cp -r temp_tpz/templates/* ~/.local/share/godot/export_templates/4.3.stable/ 2>/dev/null || cp -r temp_tpz/* ~/.local/share/godot/export_templates/4.3.stable/
           cp -r ~/.local/share/godot/export_templates/4.3.stable/* ~/.local/share/godot/export_templates/4.3.stable.official/
           
-          # التحقق البصري من وجود ملفات القوالب في السجلات
+          # التحقق من وجود ملفات الـ APK الخاصة بالقوالب
           ls -la ~/.local/share/godot/export_templates/4.3.stable/
           rm -rf temp_tpz
 
