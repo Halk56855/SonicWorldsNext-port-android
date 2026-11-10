@@ -40,7 +40,6 @@ jobs:
       - name: Generate Android Debug Keystore
         run: |
           keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
-          *Verification:* تحقق من توليد ملف `debug.keystore` في مجلد المشروع الرئيسي بنجاح.
 
       - name: Configure Godot Editor Settings for Android
         run: |
@@ -71,7 +70,6 @@ jobs:
           cp -r temp_templates/templates/* ~/.local/share/godot/export_templates/4.3.stable/
           cp -r temp_templates/templates/* ~/.local/share/godot/export_templates/4.3.stable.official/
           rm -rf temp_templates
-          *Verification:* تأكد من تثبيت قوالب التصدير في مجلدات `.local/share/godot/export_templates/`.
 
       - name: Create Complete Godot 4.3 Export Preset
         run: |
@@ -110,7 +108,6 @@ jobs:
             'keystore/release=""' \
             'keystore/release_user=""' \
             'keystore/release_password=""' > export_presets.cfg
-          *Verification:* اطبع محتوى الملف للتحقق من سلامته
           cat export_presets.cfg
 
       - name: Import Project Assets
@@ -121,7 +118,6 @@ jobs:
         run: |
           mkdir -p export
           godot --verbose --headless --export-debug "Android" export/game.apk
-          *Verification:* التأكد من نجاح أمر التصدير وإنشاء ملف `export/game.apk`.
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
