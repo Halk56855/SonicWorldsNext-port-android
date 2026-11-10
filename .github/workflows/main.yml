@@ -50,7 +50,7 @@ jobs:
           echo "${GODOT_VERSION}.stable" > "$TEMPLATE_DIR/version.txt"
           rm -rf temp_tpz Godot_v${GODOT_VERSION}*
 
-      - name: Generate Visible Pixel Touch Controls & Normalize Project
+      - name: Generate Persistent Touch Controls & Normalize Project
         run: |
           if [ -f "project.godot.txt" ]; then
             mv project.godot.txt project.godot
@@ -58,28 +58,23 @@ jobs:
           
           mkdir -p Scripts/Misc Graphics/TouchControls
 
-          # توليد رسومات أزرار واضحة ومرئية تماماً بلون مميز لكي تظهر بوضوح على شاشة الهاتف
+          # توليد رسومات أزرار واضحة وبارزة جداً باستخدام مكتبة Pillow
           cat << 'EOF' > generate_buttons.py
           import os
           from PIL import Image, ImageDraw, ImageFont
 
           os.makedirs("Graphics/TouchControls", exist_ok=True)
 
-          def create_button(filename, label_text):
-              size = (140, 140)
+          def create_button(filename, label):
+              size = (130, 130)
               img = Image.new("RGBA", size, (0, 0, 0, 0))
               draw = ImageDraw.Draw(img)
-              # رسم خلفية دائرية واضحة وبارزة
-              draw.ellipse([5, 5, 135, 135], fill=(20, 20, 30, 220), outline=(255, 255, 255, 200), width=6)
-              draw.ellipse([15, 15, 125, 125], fill=(50, 50, 70, 240))
+              # رسم دائرة خلفية داكنة مع إطار أبيض واضح لضمان الرؤية
+              draw.ellipse([5, 5, 125, 125], fill=(15, 15, 25, 230), outline=(255, 255, 255, 240), width=5)
+              draw.ellipse([15, 15, 115, 115], fill=(40, 40, 60, 250))
               
-              if label_text:
-                  # رسم النص أو الحرف داخل الزر
-                  try:
-                      font = ImageFont.load_default()
-                  except:
-                      font = None
-                  draw.text((55, 45), label_text, fill=(255, 255, 255, 255), font=font)
+              if label:
+                  draw.text((50, 45), label, fill=(255, 255, 255, 255))
                   
               img.save(f"Graphics/TouchControls/{filename}.png")
 
@@ -92,7 +87,7 @@ jobs:
           python3 -m pip install Pillow > /dev/null 2>&1 || true
           python3 generate_buttons.py
 
-          # سكريبت لإنشاء الأزرار وتثبيتها بشكل مرئي على الشاشة مع دعم زر Start
+          # إنشاء سكربت تحكم تفاعلي وثابت كـ CanvasLayer لضمان ظهوره دائماً وتوليد ضغطات الأزرار
           cat << 'EOF' > Scripts/Misc/VirtualControls.gd
           extends CanvasLayer
 
@@ -100,37 +95,44 @@ jobs:
               if DisplayServer.get_name() == "headless":
                   return
               
-              # زر التحرك لليسار
-              var left_btn = TouchScreenButton.new()
-              if ResourceLoader.exists("res://Graphics/TouchControls/btn_left.png"):
-                  left_btn.normal = load("res://Graphics/TouchControls/btn_left.png")
-              left_btn.action = "ui_left"
-              left_btn.position = Vector2(50, 420)
-              add_child(left_btn)
+              # ضبط الطبقة لتكون في المقدمة دائماً وفوق كل المشاهد
+              layer = 128
+              
+              var control_node = Control.new()
+              control_node.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+              control_node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+              add_child(control_node)
 
-              # زر التحرك لليمين
-              var right_btn = TouchScreenButton.new()
-              if ResourceLoader.exists("res://Graphics/TouchControls/btn_right.png"):
-                  right_btn.normal = load("res://Graphics/TouchControls/btn_right.png")
-              right_btn.action = "ui_right"
-              right_btn.position = Vector2(200, 420)
-              add_child(right_btn)
+              # زر اليسار
+              var left_btn = create_virtual_button("res://Graphics/TouchControls/btn_left.png", Vector2(60, 420), "ui_left")
+              control_node.add_child(left_btn)
+
+              # زر اليمين
+              var right_btn = create_virtual_button("res://Graphics/TouchControls/btn_right.png", Vector2(200, 420), "ui_right")
+              control_node.add_child(right_btn)
 
               # زر القفز (A)
-              var jump_btn = TouchScreenButton.new()
-              if ResourceLoader.exists("res://Graphics/TouchControls/btn_jump.png"):
-                  jump_btn.normal = load("res://Graphics/TouchControls/btn_jump.png")
-              jump_btn.action = "jump"
-              jump_btn.position = Vector2(1000, 420)
-              add_child(jump_btn)
+              var jump_btn = create_virtual_button("res://Graphics/TouchControls/btn_jump.png", Vector2(1000, 420), "jump")
+              control_node.add_child(jump_btn)
 
               # زر البدء (START) لتجاوز شاشة المقدمة
-              var start_btn = TouchScreenButton.new()
-              if ResourceLoader.exists("res://Graphics/TouchControls/btn_start.png"):
-                  start_btn.normal = load("res://Graphics/TouchControls/btn_start.png")
-              start_btn.action = "ui_accept"
-              start_btn.position = Vector2(520, 520)
-              add_child(start_btn)
+              var start_btn = create_virtual_button("res://Graphics/TouchControls/btn_start.png", Vector2(500, 520), "ui_accept")
+              control_node.add_child(start_btn)
+
+          func create_virtual_button(tex_path: String, pos: Vector2, action_name: String) -> TextureButton:
+              var btn = TextureButton.new()
+              if ResourceLoader.exists(tex_path):
+                  btn.texture_normal = load(tex_path)
+              btn.position = pos
+              
+              # محاكاة الضغطة الحقيقية لمدخلات اللعبة عند اللمس
+              btn.button_down.connect(func():
+                  Input.action_press(action_name)
+              )
+              btn.button_up.connect(func():
+                  Input.action_release(action_name)
+              )
+              return btn
           EOF
 
           if ! grep -q "rendering/textures/vram_compression/import_etc2_astc" project.godot; then
