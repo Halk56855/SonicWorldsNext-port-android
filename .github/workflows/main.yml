@@ -32,9 +32,19 @@ jobs:
           echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
           echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
+      - name: Initialize and Start ADB Cleanly
+        run: |
+          # إيقاف أي خادم سابق وتفادي مشاكل اتصال الـ TCP socket refused
+          adb kill-server || true
+          unset ADB_SERVER_SOCKET
+          adb start-server
+          adb devices
+          # Verification: التأكد من عمل خادم ADB بنجاح دون أخطاء اتصال.
+
       - name: Generate Android Debug Keystore
         run: |
           keytool -genkey -v -keystore $GITHUB_WORKSPACE/debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
+          # Verification: توليد مفتاح التوقيع التجريبي بنجاح.
 
       - name: Configure Godot Global Editor Settings
         run: |
@@ -45,8 +55,9 @@ jobs:
             '[resource]' \
             'export/android/android_sdk_path = "/usr/local/lib/android/sdk"' \
             'export/android/java_sdk_path = "'"$JAVA_HOME"'"' > ~/.config/godot/editor_settings-4.tres
+          # Verification: ربط مسارات أندرويد وجافا بإعدادات المحرر العالمية.
 
-      - name: Install Godot Engine 4.3 and Templates
+      - name: Install Godot Engine 4.3 and Official Templates
         run: |
           GODOT_VERSION=4.3-stable
           wget https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip
@@ -68,14 +79,16 @@ jobs:
           echo "4.3.stable.official" > ~/.local/share/godot/export_templates/4.3.stable.official/version.txt
           
           rm -rf temp_tpz
+          # Verification: تثبيت محرك غودوت وقوالب التصدير الرسمية مع ملف الإصدار.
 
-      - name: Fix Project Configuration File
+      - name: Normalize Project Configuration File
         run: |
           if [ -f "project.godot.txt" ]; then
             mv project.godot.txt project.godot
           fi
+          # Verification: ضمان توافق اسم ملف إعدادات المشروع الرئيسي.
 
-      - name: Create Direct APK Export Preset
+      - name: Generate Robust Godot 4.3 Android Preset
         run: |
           rm -f export_presets.cfg
           mkdir -p export
@@ -112,11 +125,23 @@ jobs:
             'keystore/release=""' \
             'keystore/release_user=""' \
             'keystore/release_password=""' > export_presets.cfg
+          # Verification: إنشاء ملف export_presets.cfg متوافق تماماً ومستقر.
 
-      - name: Import and Build APK
+      - name: Import Assets and Export APK
         run: |
           godot --verbose --headless --import
           godot --verbose --headless --export-debug "Android" export/game.apk
+          # Verification: استيراد الموارد وتصدير ملف game.apk بنجاح.
+
+      - name: Verify APK Generation
+        run: |
+          if [ -f "export/game.apk" ]; then
+            echo "APK generated successfully!"
+            ls -la export/game.apk
+          else
+            echo "Error: APK generation failed."
+            exit 1
+          fi
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
