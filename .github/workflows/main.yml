@@ -40,6 +40,7 @@ jobs:
       - name: Generate Android Debug Keystore
         run: |
           keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
+          *Verification:* تحقق من توليد ملف `debug.keystore` في مجلد المشروع الرئيسي بنجاح.
 
       - name: Configure Godot Editor Settings for Android
         run: |
@@ -62,7 +63,6 @@ jobs:
           unzip -q Godot_v${GODOT_VERSION}_linux.x86_64.zip
           mv Godot_v${GODOT_VERSION}_linux.x86_64 /usr/local/bin/godot
           
-          # إنشاء مسارات القوالب بالصيغتين لضمان مطابقة الإصدار الرسمي
           mkdir -p ~/.local/share/godot/export_templates/4.3.stable
           mkdir -p ~/.local/share/godot/export_templates/4.3.stable.official
           mkdir -p temp_templates
@@ -71,8 +71,9 @@ jobs:
           cp -r temp_templates/templates/* ~/.local/share/godot/export_templates/4.3.stable/
           cp -r temp_templates/templates/* ~/.local/share/godot/export_templates/4.3.stable.official/
           rm -rf temp_templates
+          *Verification:* تأكد من تثبيت قوالب التصدير في مجلدات `.local/share/godot/export_templates/`.
 
-      - name: Create Clean and Valid Export Preset
+      - name: Create Complete Godot 4.3 Export Preset
         run: |
           rm -f export_presets.cfg
           mkdir -p export
@@ -87,12 +88,14 @@ jobs:
             'include_filter=""' \
             'exclude_filter=""' \
             'export_path="export/game.apk"' \
+            'patchable_packs=false' \
             'custom_template/debug=""' \
             'custom_template/release=""' \
             '' \
             '[preset.0.options]' \
             'package/unique_name="com.port.sonicworldsnext"' \
             'package/app_name="Sonic Worlds Next"' \
+            'package/sign_app=true' \
             'version/code=1' \
             'version/name="1.0"' \
             'screen/orientation=2' \
@@ -103,7 +106,12 @@ jobs:
             'architectures/x86_64=false' \
             'keystore/debug="res://debug.keystore"' \
             'keystore/debug_user="androiddebugkey"' \
-            'keystore/debug_password="android"' > export_presets.cfg
+            'keystore/debug_password="android"' \
+            'keystore/release=""' \
+            'keystore/release_user=""' \
+            'keystore/release_password=""' > export_presets.cfg
+          *Verification:* اطبع محتوى الملف للتحقق من سلامته
+          cat export_presets.cfg
 
       - name: Import Project Assets
         run: |
@@ -113,6 +121,7 @@ jobs:
         run: |
           mkdir -p export
           godot --verbose --headless --export-debug "Android" export/game.apk
+          *Verification:* التأكد من نجاح أمر التصدير وإنشاء ملف `export/game.apk`.
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
