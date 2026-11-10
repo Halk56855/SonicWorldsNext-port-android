@@ -32,7 +32,7 @@ jobs:
           echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
           echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
-      - name: Configure Godot Editor Settings for Android SDK
+      - name: Configure Godot Editor Settings
         run: |
           mkdir -p ~/.config/godot
           printf '%s\n' \
@@ -74,7 +74,7 @@ jobs:
             echo '<svg height="128" width="128" xmlns="http://www.w3.org/2000/svg"><circle cx="64" cy="64" r="60" fill="#3366cc"/></svg>' > icon.svg
           fi
 
-      - name: Create Clean Godot 4.3 Export Preset
+      - name: Create Standard Godot 4.3 Export Preset
         run: |
           rm -f export_presets.cfg
           mkdir -p export
