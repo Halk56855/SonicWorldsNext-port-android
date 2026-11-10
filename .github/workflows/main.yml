@@ -31,23 +31,24 @@ jobs:
         run: |
           keytool -genkey -v -keystore "$GITHUB_WORKSPACE/debug.keystore" -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
 
-      - name: Install Godot Engine 4.3 & Official Templates
+      - name: Install Godot Engine 4.7.2 & Official Templates
         run: |
-          GODOT_VERSION=4.3-stable
-          wget -q https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip
-          wget -q https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz
+          GODOT_VERSION="4.7.2"
+          
+          wget -q https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip
+          wget -q https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz
 
-          unzip -q Godot_v${GODOT_VERSION}_linux.x86_64.zip
-          mv Godot_v${GODOT_VERSION}_linux.x86_64 /usr/local/bin/godot
+          unzip -q Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip
+          mv Godot_v${GODOT_VERSION}-stable_linux.x86_64 /usr/local/bin/godot
 
-          TEMPLATE_DIR=~/.local/share/godot/export_templates/4.3.stable
+          TEMPLATE_DIR=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
           mkdir -p "$TEMPLATE_DIR"
 
           mkdir -p temp_tpz
-          unzip -q Godot_v${GODOT_VERSION}_export_templates.tpz -d temp_tpz
+          unzip -q Godot_v${GODOT_VERSION}-stable_export_templates.tpz -d temp_tpz
           cp -r temp_tpz/templates/* "$TEMPLATE_DIR/"
-          echo "4.3.stable" > "$TEMPLATE_DIR/version.txt"
-          rm -rf temp_tpz Godot_v${GODOT_VERSION}_*
+          echo "${GODOT_VERSION}.stable" > "$TEMPLATE_DIR/version.txt"
+          rm -rf temp_tpz Godot_v${GODOT_VERSION}*
 
       - name: Normalize Project File Name
         run: |
@@ -95,7 +96,7 @@ jobs:
           keystore/release_password=""
           EOF
 
-      - name: Build APK without ADB
+      - name: Build APK with Godot 4.7.2
         run: |
           godot --verbose --headless --import
           godot --verbose --headless --export-debug "Android" export/game.apk
