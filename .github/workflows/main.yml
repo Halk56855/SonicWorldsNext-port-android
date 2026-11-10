@@ -31,12 +31,12 @@ jobs:
         run: |
           echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
           echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
-          # Verification: التأكد من إضافة مسارات أدوات الأندرويد إلى متغير PATH بنجاح.
+          # Verification: التأكد من إضافة مسارات أدوات الأندرويد إلى متغير PATH.
 
       - name: Generate Android Debug Keystore
         run: |
           keytool -genkey -v -keystore $GITHUB_WORKSPACE/debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
-          # Verification: التحقق من توليد ملف debug.keystore في جذر مستودع المشروع.
+          # Verification: التحقق من توليد ملف debug.keystore بنجاح.
 
       - name: Configure Godot Global Editor Settings for Android & JDK
         run: |
@@ -50,7 +50,7 @@ jobs:
             'export/android/debug_keystore = "'"$GITHUB_WORKSPACE/debug.keystore"'"' \
             'export/android/debug_keystore_user = "androiddebugkey"' \
             'export/android/debug_keystore_pass = "android"' > ~/.config/godot/editor_settings-4.tres
-          # Verification: التحقق من كتابة مسارات الأندرويد ومفتاح التوقيع في ملف إعدادات المحرر.
+          # Verification: كتابة مسارات الأندرويد ومفتاح التوقيع في إعدادات المحرر.
 
       - name: Install Godot Engine 4.3 and Templates
         run: |
@@ -61,6 +61,7 @@ jobs:
           unzip -q Godot_v${GODOT_VERSION}_linux.x86_64.zip
           mv Godot_v${GODOT_VERSION}_linux.x86_64 /usr/local/bin/godot
           
+          # تجهيز مجلدات القوالب
           mkdir -p ~/.local/share/godot/export_templates/4.3.stable
           mkdir -p ~/.local/share/godot/export_templates/4.3.stable.official
           
@@ -70,8 +71,12 @@ jobs:
           cp -r temp_tpz/templates/* ~/.local/share/godot/export_templates/4.3.stable/ 2>/dev/null || cp -r temp_tpz/* ~/.local/share/godot/export_templates/4.3.stable/
           cp -r ~/.local/share/godot/export_templates/4.3.stable/* ~/.local/share/godot/export_templates/4.3.stable.official/
           
+          # إضافة ملف version.txt لكي يتعرف غودوت على القوالب رسمياً ويتجاوز خطأ التكوين
+          echo "4.3.stable.official" > ~/.local/share/godot/export_templates/4.3.stable/version.txt
+          echo "4.3.stable.official" > ~/.local/share/godot/export_templates/4.3.stable.official/version.txt
+          
           rm -rf temp_tpz
-          # Verification: التأكد من تثبيت قوالب التصدير في مجلد 4.3.stable.official الخاص بغودوت 4.3.
+          # Verification: تثبيت القوالب وملف version.txt بنجاح في مجلدات غودوت.
 
       - name: Ensure Valid Project Configuration and Icon
         run: |
@@ -86,7 +91,7 @@ jobs:
           fi
           # Verification: التأكد من توفر ملفات التكوين الأساسية وأيقونة المشروع.
 
-      - name: Create Clean Godot 4.3 Export Preset
+      - name: Create Standard Godot 4.3 Export Preset
         run: |
           rm -f export_presets.cfg
           mkdir -p export
@@ -116,18 +121,18 @@ jobs:
             'architectures/armeabi-v7a=false' \
             'architectures/x86=false' \
             'architectures/x86_64=false' > export_presets.cfg
-          # Verification: التأكد من خلو ملف export_presets.cfg من الحقول الفارغة وتوليده بنجاح.
+          # Verification: توليد ملف export_presets.cfg بنجاح.
 
       - name: Import Project Assets
         run: |
           godot --verbose --headless --import
-          # Verification: اكتمال استيراد الموارد دون إرجاع أخطاء.
+          # Verification: استيراد موارد المشروع بدون أخطاء.
 
       - name: Build APK with Godot
         run: |
           mkdir -p export
           godot --verbose --headless --export-debug "Android" export/game.apk
-          # Verification: تجاوز خطأ التكوين بنجاح وإنشاء ملف export/game.apk.
+          # Verification: تصدير وبناء ملف APK بنجاح.
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
