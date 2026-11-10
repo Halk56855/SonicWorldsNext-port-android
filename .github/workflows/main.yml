@@ -75,11 +75,10 @@ jobs:
             mv project.godot.txt project.godot
           fi
 
-      - name: Advanced Asset Import & Dynamic Preset Generation
+      - name: Create Direct APK Export Preset
         run: |
+          rm -f export_presets.cfg
           mkdir -p export
-          
-          # توليد ملف إعدادات التصدير (export_presets.cfg) طارئاً وبشكل احترافي لضمان رضا المحرك التام
           printf '%s\n' \
             '[preset.0]' \
             'name="Android"' \
@@ -102,7 +101,7 @@ jobs:
             'version/name="1.0"' \
             'screen/orientation=2' \
             'graphics/high_density_icons=true' \
-            'gradle/use_gradle_build=true' \
+            'gradle/use_gradle_build=false' \
             'architectures/arm64-v8a=true' \
             'architectures/armeabi-v7a=false' \
             'architectures/x86=false' \
@@ -114,23 +113,13 @@ jobs:
             'keystore/release_user=""' \
             'keystore/release_password=""' > export_presets.cfg
 
-          # استيراد الموارد وتصدير حزمة اللعبة بسلاسة متناهية
-          godot --verbose --headless --import
-          godot --verbose --headless --export-pack "Android" export/game.pck
-
-      - name: Build and Package Modern Android APK
+      - name: Import and Build APK
         run: |
-          export ADB_SERVER_SOCKET=tcp:localhost:5037
-          adb start-server
-          if [ -f "export/game.pck" ]; then
-            echo "Successfully generated game package and ready for packaging!"
-          else
-            echo "Error: Build pack missing."
-            exit 1
-          fi
+          godot --verbose --headless --import
+          godot --verbose --headless --export-debug "Android" export/game.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: SonicWorldsNext-Android
-          path: export/
+          path: export/game.apk
