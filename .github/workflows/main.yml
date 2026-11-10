@@ -50,7 +50,7 @@ jobs:
           echo "${GODOT_VERSION}.stable" > "$TEMPLATE_DIR/version.txt"
           rm -rf temp_tpz Godot_v${GODOT_VERSION}*
 
-      - name: Download External Buttons Pack & Inject Touch Controls
+      - name: Download Buttons and Force Screen UI Injection
         run: |
           if [ -f "project.godot.txt" ]; then
             mv project.godot.txt project.godot
@@ -58,15 +58,13 @@ jobs:
           
           mkdir -p Scripts/Misc Graphics/TouchControls
 
-          # 1. تحميل حزمة الأزرار الخارجية التي أرسلتها وفك ضغطها واستخراج الصور منها
+          # تحميل حزمة الأزرار واستخراج الرسوميات
           wget -q "https://filecache37.gamebanana.com/mods/refined_mtc_3f59c.zip" -O controls.zip
           unzip -o controls.zip -d extracted_controls/ || true
-          
-          # نقل أي صور أو أيقونات تم العثور عليها إلى مجلد الرسوميات الخاص باللعبة
           find extracted_controls/ -type f \( -name "*.png" -o -name "*.webp" \) -exec cp {} Graphics/TouchControls/ \;
           rm -rf controls.zip extracted_controls
 
-          # 2. توليد صور احتياطية للأزرار في حال لم تكن الصور مطابقة بالأسماء، لضمان ظهورها 100%
+          # توليد أزرار احتياطية مرئية وبارزة جداً على الشاشة لضمان عدم اختفائها
           cat << 'EOF' > generate_fallback.py
           import os
           from PIL import Image, ImageDraw
@@ -76,25 +74,25 @@ jobs:
           def create_btn(filename, label):
               path = f"Graphics/TouchControls/{filename}.png"
               if not os.path.exists(path):
-                  size = (300, 100) if filename == "btn_start" else (130, 130)
+                  size = (320, 110) if filename == "btn_start" else (140, 140)
                   img = Image.new("RGBA", size, (0, 0, 0, 0))
                   draw = ImageDraw.Draw(img)
                   if filename == "btn_start":
-                      draw.rectangle([5, 5, 295, 95], fill=(20, 20, 40, 240), outline=(255, 255, 255, 255), width=5)
+                      draw.rectangle([5, 5, 315, 105], fill=(40, 40, 70, 240), outline=(255, 255, 255, 255), width=6)
                   else:
-                      draw.ellipse([5, 5, 125, 125], fill=(20, 20, 40, 240), outline=(255, 255, 255, 255), width=5)
+                      draw.ellipse([5, 5, 135, 135], fill=(40, 40, 70, 240), outline=(255, 255, 255, 255), width=6)
                   img.save(path)
 
           create_btn("btn_left", "◄")
           create_btn("btn_right", "►")
           create_btn("btn_jump", "A")
-          create_btn("btn_start", "START")
+          create_btn("btn_start", "PRESS START")
           EOF
 
           python3 -m pip install Pillow > /dev/null 2>&1 || true
           python3 generate_fallback.py
 
-          # 3. إنشاء سكربت التحكم وتثبيته كـ Autoload لضمان ظهوره فوق شاشة Press Start وتجاوزها
+          # سكربت يضمن ظهور الأزرار فوق الشاشة دائماً وتغطية مساحة اللمس
           cat << 'EOF' > Scripts/Misc/VirtualControls.gd
           extends CanvasLayer
 
@@ -102,22 +100,23 @@ jobs:
               if DisplayServer.get_name() == "headless":
                   return
               
-              layer = 128
+              # طبقة علوية فائقة لضمان ظهور الأزرار فوق شاشة المقدمة البيضاء
+              layer = 999
               
               var control_node = Control.new()
               control_node.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
               control_node.mouse_filter = Control.MOUSE_FILTER_IGNORE
               add_child(control_node)
 
-              # زر اليسار
-              control_node.add_child(create_btn("res://Graphics/TouchControls/btn_left.png", Vector2(50, 400), "ui_left"))
-              # زر اليمين
-              control_node.add_child(create_btn("res://Graphics/TouchControls/btn_right.png", Vector2(190, 400), "ui_right"))
-              # زر القفز (A)
-              control_node.add_child(create_btn("res://Graphics/TouchControls/btn_jump.png", Vector2(980, 400), "jump"))
+              # زر اليسار (أسفل اليسار)
+              control_node.add_child(create_btn("res://Graphics/TouchControls/btn_left.png", Vector2(60, 450), "ui_left"))
+              # زر اليمين (أسفل اليسار بجانب زر اليسار)
+              control_node.add_child(create_btn("res://Graphics/TouchControls/btn_right.png", Vector2(220, 450), "ui_right"))
+              # زر القفز A (أسفل اليمين)
+              control_node.add_child(create_btn("res://Graphics/TouchControls/btn_jump.png", Vector2(960, 450), "jump"))
               
-              # زر الـ START الكبير في المنتصف لتجاوز شاشة المقدمة
-              var start_btn = create_btn("res://Graphics/TouchControls/btn_start.png", Vector2(380, 480), "ui_accept")
+              # زر START الكبير (في منتصف الشاشة من الأسفل تماماً لتجاوز شاشة Press Start)
+              var start_btn = create_btn("res://Graphics/TouchControls/btn_start.png", Vector2(380, 500), "ui_accept")
               start_btn.button_down.connect(func():
                   var ev = InputEventKey.new()
                   ev.keycode = KEY_ENTER
@@ -137,6 +136,8 @@ jobs:
               if ResourceLoader.exists(tex_path):
                   btn.texture_normal = load(tex_path)
               btn.position = pos
+              btn.expand_mode = TextureButton.EXPAND_IGNORE_SIZE
+              btn.custom_minimum_size = Vector2(140, 140) if action_name != "ui_accept" else Vector2(320, 100)
               
               btn.button_down.connect(func():
                   Input.action_press(action_name)
@@ -147,7 +148,6 @@ jobs:
               return btn
           EOF
 
-          # 4. تفعيل إعدادات الضغط والـ Autoload في ملف إعدادات غودوت
           if ! grep -q "rendering/textures/vram_compression/import_etc2_astc" project.godot; then
             echo "" >> project.godot
             echo "[rendering]" >> project.godot
