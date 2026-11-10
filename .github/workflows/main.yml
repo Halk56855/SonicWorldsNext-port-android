@@ -76,11 +76,6 @@ jobs:
           rm -rf temp_tpz
           # Verification: تثبيت القوالب وملف version.txt بنجاح.
 
-      - name: Verify Export Templates Contents
-        run: |
-          ls -la ~/.local/share/godot/export_templates/4.3.stable.official/
-          # Verification: التأكد من وجود ملفات قوالب أندرويد مثل android_debug.apk في السجلات.
-
       - name: Ensure Valid Project Configuration and Icon
         run: |
           if [ ! -f "project.godot" ]; then
@@ -132,11 +127,13 @@ jobs:
           godot --verbose --headless --import
           # Verification: استيراد موارد المشروع بدون أخطاء.
 
-      - name: Build APK with Godot
+      - name: Start ADB Server and Build APK with Godot
         run: |
           mkdir -p export
+          export ADB_SERVER_SOCKET=tcp:localhost:5037
+          adb start-server
           godot --verbose --headless --export-debug "Android" export/game.apk
-          # Verification: تصدير وبناء ملف APK بنجاح وتوليد export/game.apk.
+          # Verification: بدء تشغيل خادم ADB وتصدير وبناء ملف APK بنجاح.
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
