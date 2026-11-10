@@ -37,10 +37,12 @@ jobs:
           export ADB_SERVER_SOCKET=tcp:localhost:5037
           adb start-server
           adb devices
+          *Verification:* تحقق من ظهور خادم ADB قيد التشغيل بنجاح في السجلات.
 
       - name: Generate Android Debug Keystore
         run: |
           keytool -genkey -v -keystore $GITHUB_WORKSPACE/debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
+          *Verification:* تأكد من توليد ملف `debug.keystore` في مسار العمل بنجاح.
 
       - name: Configure Godot Editor Settings for Android & JDK
         run: |
@@ -54,6 +56,7 @@ jobs:
             'export/android/debug_keystore = "'"$GITHUB_WORKSPACE/debug.keystore"'"' \
             'export/android/debug_keystore_user = "androiddebugkey"' \
             'export/android/debug_keystore_pass = "android"' > ~/.config/godot/editor_settings-4.tres
+          *Verification:* تحقق من إنشاء ملف إعدادات المححر في `~/.config/godot/editor_settings-4.tres`.
 
       - name: Install Godot Engine 4.3 and Templates
         run: |
@@ -73,8 +76,8 @@ jobs:
           cp -r temp_tpz/templates/* ~/.local/share/godot/export_templates/4.3.stable/ 2>/dev/null || cp -r temp_tpz/* ~/.local/share/godot/export_templates/4.3.stable/
           cp -r ~/.local/share/godot/export_templates/4.3.stable/* ~/.local/share/godot/export_templates/4.3.stable.official/
           
-          ls -la ~/.local/share/godot/export_templates/4.3.stable/
           rm -rf temp_tpz
+          *Verification:* تأكد من تنزيل وفك ضغط محرك غودوت وقوالب التصدير بدون أخطاء.
 
       - name: Ensure Valid Project Configuration and Icon
         run: |
@@ -84,14 +87,10 @@ jobs:
           if ! grep -q "config/name" project.godot; then
             echo -e '[application]\n\nconfig/name="Sonic Worlds Next"\nconfig/icon="res://icon.svg"' >> project.godot
           fi
-          # توفير ملف أيقونة افتراضي لمنع أخطاء توليد الأيقونات عالية الكثافة
           if [ ! -f "icon.svg" ]; then
-            cat << 'EOF' > icon.svg
-<svg height="128" width="128" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="64" cy="64" r="60" fill="#3366cc" />
-</svg>
-EOF
+            echo '<svg height="128" width="128" xmlns="http://www.w3.org/2000/svg"><circle cx="64" cy="64" r="60" fill="#3366cc"/></svg>' > icon.svg
           fi
+          *Verification:* تحقق من توفر ملفي `project.godot` و `icon.svg` في جذر المشروع.
 
       - name: Create Complete Godot 4.3 Export Preset
         run: |
@@ -123,24 +122,28 @@ EOF
             'architectures/armeabi-v7a=false' \
             'architectures/x86=false' \
             'architectures/x86_64=false' \
-            'keystore/debug="res://debug.keystore"' \
+            'keystore/debug="'"$GITHUB_WORKSPACE/debug.keystore"'"' \
             'keystore/debug_user="androiddebugkey"' \
             'keystore/debug_password="android"' \
             'keystore/release=""' \
             'keystore/release_user=""' \
             'keystore/release_password=""' > export_presets.cfg
+          *Verification:* تأكد من توليد ملف `export_presets.cfg` وقراءته بنجاح.
 
       - name: Import Project Assets
         run: |
           godot --verbose --headless --import
+          *Verification:* تأكد من انتهاء عملية استيراد الموارد بدون إرجاع رموز خطأ.
 
       - name: Build APK with Godot
         run: |
           mkdir -p export
           godot --verbose --headless --export-debug "Android" export/game.apk
+          *Verification:* تحقق من ظهور رسالة النجاح وتوليد ملف `export/game.apk` في المجلد المستهدف.
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: SonicWorldsNext-Android
           path: export/game.apk
+          *Verification:* تأكد من رفع الـ Artifact بنجاح في تفاصيل الـ workflow.
