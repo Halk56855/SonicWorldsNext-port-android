@@ -11,7 +11,7 @@ jobs:
     env:
       ANDROID_HOME: /usr/local/lib/android/sdk
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-    
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -33,116 +33,107 @@ jobs:
           echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
           echo "$ANDROID_HOME/build-tools/34.0.0" >> $GITHUB_PATH
 
-      - name: Start and Verify ADB Service
+      - name: Start ADB Server
         run: |
           adb kill-server || true
           unset ADB_SERVER_SOCKET
           adb start-server
-          adb devices
-          # Verification: التأكد من عمل خادم ADB واستقرار اتصاله المحلي.
 
-      - name: Generate Android Debug Keystore
+      - name: Generate Debug Keystore
         run: |
           keytool -genkey -v -keystore $GITHUB_WORKSPACE/debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
-          # Verification: توليد ملف debug.keystore بنجاح في مجلد المشروع.
 
-      - name: Configure Godot Global Editor Settings for 4.3
+      - name: Configure Godot 4.3 Editor Settings
         run: |
           mkdir -p ~/.config/godot
-          printf '%s\n' \
-            '[gd_resource type="EditorSettings" format=3]' \
-            '' \
-            '[resource]' \
-            'export/android/android_sdk_path = "/usr/local/lib/android/sdk"' \
-            'export/android/java_sdk_path = "'"$JAVA_HOME"'"' \
-            'export/android/debug_keystore = "'"$GITHUB_WORKSPACE/debug.keystore"'"' \
-            'export/android/debug_keystore_user = "androiddebugkey"' \
-            'export/android/debug_keystore_pass = "android"' > ~/.config/godot/editor_settings-4.tres
-          # Verification: حقن المسارات والمفاتيح الرسمية في إعدادات المحرر العالمية.
+          cat << 'EOF' > ~/.config/godot/editor_settings-4.tres
+          [gd_resource type="EditorSettings" format=3]
 
-      - name: Install Godot Engine 4.3 and Official Export Templates
+          [resource]
+          export/android/android_sdk_path = "/usr/local/lib/android/sdk"
+          export/android/debug_keystore = "WORKSPACE_KEYSTORE"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          export/android/java_sdk_path = "JAVA_HOME_PATH"
+          EOF
+          sed -i "s|WORKSPACE_KEYSTORE|$GITHUB_WORKSPACE/debug.keystore|g" ~/.config/godot/editor_settings-4.tres
+          sed -i "s|JAVA_HOME_PATH|$JAVA_HOME|g" ~/.config/godot/editor_settings-4.tres
+
+      - name: Install Godot Engine 4.3 & Official Export Templates
         run: |
           GODOT_VERSION=4.3-stable
-          wget https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip
-          wget https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz
-          
+          wget -q https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip
+          wget -q https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz
+
           unzip -q Godot_v${GODOT_VERSION}_linux.x86_64.zip
           mv Godot_v${GODOT_VERSION}_linux.x86_64 /usr/local/bin/godot
-          
-          mkdir -p ~/.local/share/godot/export_templates/4.3.stable
-          mkdir -p ~/.local/share/godot/export_templates/4.3.stable.official
-          
+
+          TEMPLATE_DIR=~/.local/share/godot/export_templates/4.3.stable
+          mkdir -p "$TEMPLATE_DIR"
+
           mkdir -p temp_tpz
           unzip -q Godot_v${GODOT_VERSION}_export_templates.tpz -d temp_tpz
-          
-          cp -r temp_tpz/templates/* ~/.local/share/godot/export_templates/4.3.stable/ 2>/dev/null || cp -r temp_tpz/* ~/.local/share/godot/export_templates/4.3.stable/
-          cp -r ~/.local/share/godot/export_templates/4.3.stable/* ~/.local/share/godot/export_templates/4.3.stable.official/
-          
-          echo "4.3.stable.official" > ~/.local/share/godot/export_templates/4.3.stable/version.txt
-          echo "4.3.stable.official" > ~/.local/share/godot/export_templates/4.3.stable.official/version.txt
-          
-          rm -rf temp_tpz
-          # Verification: تثبيت محرك غودوت 4.3 وقوالب التصدير الرسمية بنجاح.
+          cp -r temp_tpz/templates/* "$TEMPLATE_DIR/"
+          rm -rf temp_tpz Godot_v${GODOT_VERSION}_*
 
-      - name: Normalize Project Configuration File
+      - name: Normalize Project File Name
         run: |
           if [ -f "project.godot.txt" ]; then
             mv project.godot.txt project.godot
           fi
-          # Verification: التأكد من وجود ملف project.godot بالاسم الصحيح.
 
-      - name: Create Robust Android Export Preset
+      - name: Create Valid Export Preset
         run: |
-          rm -f export_presets.cfg
           mkdir -p export
-          printf '%s\n' \
-            '[preset.0]' \
-            'name="Android"' \
-            'platform="Android"' \
-            'runnable=true' \
-            'dedicated_server=false' \
-            'custom_features=""' \
-            'export_filter="all_resources"' \
-            'include_filter=""' \
-            'exclude_filter=""' \
-            'export_path="export/game.apk"' \
-            'patchable_packs=false' \
-            'custom_template/debug=""' \
-            'custom_template/release=""' \
-            '' \
-            '[preset.0.options]' \
-            'package/unique_name="com.port.sonicworldsnext"' \
-            'package/app_name="Sonic Worlds Next"' \
-            'version/code=1' \
-            'version/name="1.0"' \
-            'screen/orientation=2' \
-            'graphics/high_density_icons=true' \
-            'gradle/use_gradle_build=false' \
-            'architectures/arm64-v8a=true' \
-            'architectures/armeabi-v7a=false' \
-            'architectures/x86=false' \
-            'architectures/x86_64=false' \
-            'keystore/debug="'"$GITHUB_WORKSPACE/debug.keystore"'"' \
-            'keystore/debug_user="androiddebugkey"' \
-            'keystore/debug_password="android"' \
-            'keystore/release=""' \
-            'keystore/release_user=""' \
-            'keystore/release_password=""' > export_presets.cfg
-          # Verification: توليد ملف إعدادات التصدير export_presets.cfg متوافقاً تماماً.
+          cat << EOF > export_presets.cfg
+          [preset.0]
 
-      - name: Import Assets and Build APK
+          name="Android"
+          platform="Android"
+          runnable=true
+          dedicated_server=false
+          custom_features=""
+          export_filter="all_resources"
+          include_filter=""
+          exclude_filter=""
+          export_path="export/game.apk"
+          encryption_include_filters=""
+          encryption_exclude_filters=""
+          encrypt_pck=false
+          encrypt_directory=false
+
+          [preset.0.options]
+
+          custom_template/debug=""
+          custom_template/release=""
+          gradle/use_gradle_build=false
+          architectures/arm64-v8a=true
+          architectures/armeabi-v7a=false
+          architectures/x86_32=false
+          architectures/x86_64=false
+          package/unique_name="com.port.sonicworldsnext"
+          package/name="Sonic Worlds Next"
+          package/signed=true
+          keystore/debug="$GITHUB_WORKSPACE/debug.keystore"
+          keystore/debug_user="androiddebugkey"
+          keystore/debug_password="android"
+          keystore/release=""
+          keystore/release_user=""
+          keystore/release_password=""
+          EOF
+
+      - name: Import Assets & Build APK
         run: |
           godot --verbose --headless --import
           godot --verbose --headless --export-debug "Android" export/game.apk
-          # Verification: استيراد الأصول وتصدير ملف الـ APK بنجاح تام.
 
-      - name: Verify APK Output
+      - name: Verify & Upload APK
         run: |
           if [ -f "export/game.apk" ]; then
-            echo "Success: APK generated at export/game.apk"
+            echo "Build successful! APK size:"
             ls -lh export/game.apk
           else
-            echo "Error: APK file was not found."
+            echo "APK generation failed."
             exit 1
           fi
 
