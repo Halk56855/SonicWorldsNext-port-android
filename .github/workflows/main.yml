@@ -50,7 +50,7 @@ jobs:
           echo "${GODOT_VERSION}.stable" > "$TEMPLATE_DIR/version.txt"
           rm -rf temp_tpz Godot_v${GODOT_VERSION}*
 
-      - name: Generate High-Visibility Touch Controls On Screen
+      - name: Download Touch Buttons and Inject All Controls
         run: |
           if [ -f "project.godot.txt" ]; then
             mv project.godot.txt project.godot
@@ -58,36 +58,41 @@ jobs:
           
           mkdir -p Scripts/Misc Graphics/TouchControls
 
-          # توليد أزرار لمس واضحة ومرئية تماماً بمكتبة بايثون لكي تظهر على الشاشة
+          # 1. تحميل حزمة أزرار اللمس الخارجية واستخراج الرسوميات
+          wget -q "https://filecache37.gamebanana.com/mods/refined_mtc_3f59c.zip" -O controls.zip
+          unzip -o controls.zip -d extracted_controls/ || true
+          find extracted_controls/ -type f \( -name "*.png" -o -name "*.webp" \) -exec cp {} Graphics/TouchControls/ \;
+          rm -rf controls.zip extracted_controls
+
+          # 2. توليد صور احتياطية لجميع الأزرار المطلوبة (فوق، تحت، يسار، يمين، a, s, d, z, x, c, enter)
           cat << 'EOF' > generate_buttons.py
           import os
           from PIL import Image, ImageDraw
 
           os.makedirs("Graphics/TouchControls", exist_ok=True)
 
-          def create_btn(filename, label):
-              path = f"Graphics/TouchControls/{filename}.png"
-              size = (340, 120) if filename == "btn_start" else (150, 150)
-              img = Image.new("RGBA", size, (0, 0, 0, 0))
-              draw = ImageDraw.Draw(img)
-              
-              if filename == "btn_start":
-                  draw.rectangle([5, 5, 335, 115], fill=(30, 30, 60, 240), outline=(255, 255, 255, 255), width=6)
-              else:
-                  draw.ellipse([5, 5, 145, 145], fill=(30, 30, 60, 240), outline=(255, 255, 255, 255), width=6)
-                  
-              img.save(path)
+          buttons = [
+              "btn_up", "btn_down", "btn_left", "btn_right",
+              "btn_a", "btn_s", "btn_d", "btn_z", "btn_x", "btn_c", "btn_enter"
+          ]
 
-          create_btn("btn_left", "◄")
-          create_btn("btn_right", "►")
-          create_btn("btn_jump", "A")
-          create_btn("btn_start", "PRESS START")
+          for b in buttons:
+              path = f"Graphics/TouchControls/{b}.png"
+              if not os.path.exists(path):
+                  size = (260, 90) if b == "btn_enter" else (100, 100)
+                  img = Image.new("RGBA", size, (0, 0, 0, 0))
+                  draw = ImageDraw.Draw(img)
+                  if b == "btn_enter":
+                      draw.rectangle([5, 5, 255, 85], fill=(30, 30, 60, 240), outline=(255, 255, 255, 255), width=5)
+                  else:
+                      draw.ellipse([5, 5, 95, 95], fill=(30, 30, 60, 240), outline=(255, 255, 255, 255), width=5)
+                  img.save(path)
           EOF
 
           python3 -m pip install Pillow > /dev/null 2>&1 || true
           python3 generate_buttons.py
 
-          # سكربت عرض الأزرار كطبقة علوية فوق الشاشة وتفعيل الضغط بالإصبع
+          # 3. إنشاء سكربت التحكم الشامل لعرض كافة الأزرار المطلوبة على شاشة الهاتف
           cat << 'EOF' > Scripts/Misc/VirtualControls.gd
           extends CanvasLayer
 
@@ -95,7 +100,6 @@ jobs:
               if DisplayServer.get_name() == "headless":
                   return
               
-              # طبقة علوية فائقة لضمان ظهور الأزرار فوق كل شاشة بما فيها شاشة Press Start
               layer = 999
               
               var control_node = Control.new()
@@ -103,42 +107,46 @@ jobs:
               control_node.mouse_filter = Control.MOUSE_FILTER_IGNORE
               add_child(control_node)
 
-              # زر اليسار (أسفل اليسار)
-              control_node.add_child(create_btn("res://Graphics/TouchControls/btn_left.png", Vector2(50, 420), "ui_left"))
-              # زر اليمين (أسفل اليسار بجانب زر اليسار)
-              control_node.add_child(create_btn("res://Graphics/TouchControls/btn_right.png", Vector2(220, 420), "ui_right"))
-              # زر القفز A (أسفل اليمين)
-              control_node.add_child(create_btn("res://Graphics/TouchControls/btn_jump.png", Vector2(950, 420), "jump"))
-              
-              # زر START الكبير في منتصف الشاشة من الأسفل للضغط عليه بالإصبع لتجاوز شاشة البداية
-              var start_btn = create_btn("res://Graphics/TouchControls/btn_start.png", Vector2(370, 480), "ui_accept")
-              start_btn.button_down.connect(func():
-                  var ev = InputEventKey.new()
-                  ev.keycode = KEY_ENTER
-                  ev.pressed = true
-                  Input.parse_input_event(ev)
-              )
-              start_btn.button_up.connect(func():
-                  var ev = InputEventKey.new()
-                  ev.keycode = KEY_ENTER
-                  ev.pressed = false
-                  Input.parse_input_event(ev)
-              )
-              control_node.add_child(start_btn)
+              # D-Pad (فوق، تحت، يسار، يمين)
+              control_node.add_child(create_btn("res://Graphics/TouchControls/btn_left.png", Vector2(40, 420), "ui_left", KEY_LEFT))
+              control_node.add_child(create_btn("res://Graphics/TouchControls/btn_right.png", Vector2(160, 420), "ui_right", KEY_RIGHT))
+              control_node.add_child(create_btn("res://Graphics/TouchControls/btn_up.png", Vector2(100, 360), "ui_up", KEY_UP))
+              control_node.add_child(create_btn("res://Graphics/TouchControls/btn_down.png", Vector2(100, 480), "ui_down", KEY_DOWN))
 
-          func create_btn(tex_path: String, pos: Vector2, action_name: String) -> TextureButton:
+              # أزرار الحروف (Z, X, C, A, S, D)
+              control_node.add_child(create_btn("res://Graphics/TouchControls/btn_z.png", Vector2(680, 480), "z", KEY_Z))
+              control_node.add_child(create_btn("res://Graphics/TouchControls/btn_x.png", Vector2(790, 480), "x", KEY_X))
+              control_node.add_child(create_btn("res://Graphics/TouchControls/btn_c.png", Vector2(900, 480), "c", KEY_C))
+              
+              control_node.add_child(create_btn("res://Graphics/TouchControls/btn_a.png", Vector2(680, 370), "a", KEY_A))
+              control_node.add_child(create_btn("res://Graphics/TouchControls/btn_s.png", Vector2(790, 370), "s", KEY_S))
+              control_node.add_child(create_btn("res://Graphics/TouchControls/btn_d.png", Vector2(900, 370), "d", KEY_D))
+
+              # زر Enter للبدء وتجاوز شاشة Press Start
+              var enter_btn = create_btn("res://Graphics/TouchControls/btn_enter.png", Vector2(370, 500), "ui_accept", KEY_ENTER)
+              control_node.add_child(enter_btn)
+
+          func create_btn(tex_path: String, pos: Vector2, action_name: String, key_code: Key) -> TextureButton:
               var btn = TextureButton.new()
               if ResourceLoader.exists(tex_path):
                   btn.texture_normal = load(tex_path)
               btn.position = pos
               btn.expand_mode = TextureButton.EXPAND_IGNORE_SIZE
-              btn.custom_minimum_size = Vector2(150, 150) if action_name != "ui_accept" else Vector2(340, 120)
+              btn.custom_minimum_size = Vector2(260, 90) if action_name == "ui_accept" else Vector2(100, 100)
               
               btn.button_down.connect(func():
                   Input.action_press(action_name)
+                  var ev = InputEventKey.new()
+                  ev.keycode = key_code
+                  ev.pressed = true
+                  Input.parse_input_event(ev)
               )
               btn.button_up.connect(func():
                   Input.action_release(action_name)
+                  var ev = InputEventKey.new()
+                  ev.keycode = key_code
+                  ev.pressed = false
+                  Input.parse_input_event(ev)
               )
               return btn
           EOF
