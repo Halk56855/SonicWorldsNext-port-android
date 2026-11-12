@@ -50,17 +50,25 @@ jobs:
           echo "${GODOT_VERSION}.stable" > "$TEMPLATE_DIR/version.txt"
           rm -rf temp_tpz Godot_v${GODOT_VERSION}*
 
-      - name: Clean Project Config
+      - name: Enable Required ETC2/ASTC Compression in project.godot
         run: |
           if [ -f "project.godot.txt" ]; then
             mv project.godot.txt project.godot
           fi
           
-          # تنظيف أي سكربتات أو إضافات سابقة قد تسبب تداخلاً في الرسوميات
-          rm -rf Scripts/Misc/VirtualControls.gd Scenes/TouchControls.tscn Graphics/TouchControls
-          
-          sed -i '/VirtualControls/d' project.godot || true
-          sed -i '/TouchControls/d' project.godot || true
+          # إزالة أي إعدادات سابقة متعارضة وضبط إعداد ضغط الرسوميات الإلزامي لأندرويد
+          sed -i '/import_etc2_astc/d' project.godot || true
+
+          if ! grep -q "\[rendering\]" project.godot; then
+            echo "" >> project.godot
+            echo "[rendering]" >> project.godot
+          fi
+
+          # حقن الإعداد الإلزامي الذي يطلبه محرك غودوت لتصدير الأندرويد
+          cat << 'EOF' >> project.godot
+
+          textures/vram_compression/import_etc2_astc=true
+          EOF
 
       - name: Generate Clean Export Preset
         run: |
