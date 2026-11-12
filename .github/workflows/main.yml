@@ -50,129 +50,17 @@ jobs:
           echo "${GODOT_VERSION}.stable" > "$TEMPLATE_DIR/version.txt"
           rm -rf temp_tpz Godot_v${GODOT_VERSION}*
 
-      - name: Inject Touch Controls and Setup Autoload
+      - name: Clean Project Config
         run: |
           if [ -f "project.godot.txt" ]; then
             mv project.godot.txt project.godot
           fi
           
-          mkdir -p Scripts/Misc Graphics/TouchControls
-
-          # 1. تحميل أزرار اللمس واستخراج رسومياتها
-          wget -q "https://filecache37.gamebanana.com/mods/refined_mtc_3f59c.zip" -O controls.zip
-          unzip -o controls.zip -d extracted_controls/ || true
-          find extracted_controls/ -type f \( -name "*.png" -o -name "*.webp" \) -exec cp {} Graphics/TouchControls/ \;
-          rm -rf controls.zip extracted_controls
-
-          # 2. توليد صور الأزرار بدقة واضحة لتناسب الشاشة
-          cat << 'EOF' > generate_buttons.py
-          import os
-          from PIL import Image, ImageDraw
-
-          os.makedirs("Graphics/TouchControls", exist_ok=True)
-
-          buttons = [
-              "btn_up", "btn_down", "btn_left", "btn_right",
-              "btn_a", "btn_s", "btn_d", "btn_z", "btn_x", "btn_c", "btn_enter"
-          ]
-
-          for b in buttons:
-              path = f"Graphics/TouchControls/{b}.png"
-              if not os.path.exists(path):
-                  size = (300, 110) if b == "btn_enter" else (120, 120)
-                  img = Image.new("RGBA", size, (0, 0, 0, 0))
-                  draw = ImageDraw.Draw(img)
-                  if b == "btn_enter":
-                      draw.rectangle([5, 5, 295, 105], fill=(35, 35, 70, 245), outline=(255, 255, 255, 255), width=5)
-                  else:
-                      draw.ellipse([5, 5, 115, 115], fill=(35, 35, 70, 245), outline=(255, 255, 255, 255), width=5)
-                  img.save(path)
-          EOF
-
-          python3 -m pip install Pillow > /dev/null 2>&1 || true
-          python3 generate_buttons.py
-
-          # 3. سكربت التحكم الشامل والمباشر
-          cat << 'EOF' > Scripts/Misc/VirtualControls.gd
-          extends CanvasLayer
-
-          func _ready():
-              if DisplayServer.get_name() == "headless":
-                  return
-              
-              layer = 128
-              
-              var root_control = Control.new()
-              root_control.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-              root_control.mouse_filter = Control.MOUSE_FILTER_IGNORE
-              add_child(root_control)
-
-              # D-Pad (اليسار، اليمين، فوق، تحت)
-              var dpad = Control.new()
-              dpad.position = Vector2(30, 240)
-              dpad.size = Vector2(320, 320)
-              root_control.add_child(dpad)
-
-              dpad.add_child(create_btn("res://Graphics/TouchControls/btn_left.png", Vector2(0, 110), "ui_left", KEY_LEFT))
-              dpad.add_child(create_btn("res://Graphics/TouchControls/btn_right.png", Vector2(180, 110), "ui_right", KEY_RIGHT))
-              dpad.add_child(create_btn("res://Graphics/TouchControls/btn_up.png", Vector2(90, 10), "ui_up", KEY_UP))
-              dpad.add_child(create_btn("res://Graphics/TouchControls/btn_down.png", Vector2(90, 210), "ui_down", KEY_DOWN))
-
-              # أزرار الحروف (Z, X, C, A, S, D)
-              var action_pad = Control.new()
-              action_pad.position = Vector2(370, 240)
-              action_pad.size = Vector2(340, 320)
-              root_control.add_child(action_pad)
-
-              action_pad.add_child(create_btn("res://Graphics/TouchControls/btn_z.png", Vector2(0, 150), "z", KEY_Z))
-              action_pad.add_child(create_btn("res://Graphics/TouchControls/btn_x.png", Vector2(120, 150), "x", KEY_X))
-              action_pad.add_child(create_btn("res://Graphics/TouchControls/btn_c.png", Vector2(240, 150), "c", KEY_C))
-              
-              action_pad.add_child(create_btn("res://Graphics/TouchControls/btn_a.png", Vector2(0, 20), "a", KEY_A))
-              action_pad.add_child(create_btn("res://Graphics/TouchControls/btn_s.png", Vector2(120, 20), "s", KEY_S))
-              action_pad.add_child(create_btn("res://Graphics/TouchControls/btn_d.png", Vector2(240, 20), "d", KEY_D))
-
-              # زر Enter للبدء في المنتصف
-              var enter_btn = create_btn("res://Graphics/TouchControls/btn_enter.png", Vector2(210, 410), "ui_accept", KEY_ENTER)
-              root_control.add_child(enter_btn)
-
-          func create_btn(tex_path: String, pos: Vector2, action_name: String, key_code: Key) -> TextureButton:
-              var btn = TextureButton.new()
-              if ResourceLoader.exists(tex_path):
-                  btn.texture_normal = load(tex_path)
-              btn.position = pos
-              btn.expand_mode = TextureButton.EXPAND_IGNORE_SIZE
-              btn.custom_minimum_size = Vector2(300, 110) if action_name == "ui_accept" else Vector2(110, 110)
-              
-              btn.button_down.connect(func():
-                  Input.action_press(action_name)
-                  var ev = InputEventKey.new()
-                  ev.keycode = key_code
-                  ev.pressed = true
-                  Input.parse_input_event(ev)
-              )
-              btn.button_up.connect(func():
-                  Input.action_release(action_name)
-                  var ev = InputEventKey.new()
-                  ev.keycode = key_code
-                  ev.pressed = false
-                  Input.parse_input_event(ev)
-              )
-              return btn
-          EOF
-
-          # 4. ربط السكربت كـ Autoload في ملف إعدادات المشروع
-          if ! grep -q "rendering/textures/vram_compression/import_etc2_astc" project.godot; then
-            echo "" >> project.godot
-            echo "[rendering]" >> project.godot
-            echo "textures/vram_compression/import_etc2_astc=true" >> project.godot
-          fi
-
-          if ! grep -q "VirtualControls" project.godot; then
-            echo "" >> project.godot
-            echo "[autoload]" >> project.godot
-            echo "VirtualControls=\"*res://Scripts/Misc/VirtualControls.gd\"" >> project.godot
-          fi
+          # تنظيف أي سكربتات أو إضافات سابقة قد تسبب تداخلاً في الرسوميات
+          rm -rf Scripts/Misc/VirtualControls.gd Scenes/TouchControls.tscn Graphics/TouchControls
+          
+          sed -i '/VirtualControls/d' project.godot || true
+          sed -i '/TouchControls/d' project.godot || true
 
       - name: Generate Clean Export Preset
         run: |
