@@ -50,36 +50,26 @@ jobs:
           echo "${GODOT_VERSION}.stable" > "$TEMPLATE_DIR/version.txt"
           rm -rf temp_tpz Godot_v${GODOT_VERSION}*
 
-      - name: Fix Texture Corruption & Display Settings in project.godot
+      - name: Fix Texture Import and Compression for Android
         run: |
           if [ -f "project.godot.txt" ]; then
             mv project.godot.txt project.godot
           fi
-          
-          # إزالة أي إضافات سابقة قد تسبب تداخل العرض
-          rm -rf Scripts/Misc/VirtualControls.gd Scenes/TouchControls.tscn Graphics/TouchControls
-          sed -i '/VirtualControls/d' project.godot || true
-          sed -i '/TouchControls/d' project.godot || true
 
-          # إصلاح إعدادات النافذة والرسوميات لمنع ظهور الشبكة البيضاء وتصحيح العرض
-          if ! grep -q "\[display\]" project.godot; then
+          # تعديل وضع ضغط الصور في جميع ملفات الـ import لمنع ظهور الخطوط والشبكة البيضاء
+          find . -name "*.import" -type f -exec sed -i 's/compress\/mode=0/compress\/mode=1/g' {} +
+
+          # إعدادات التصيير الإلزامية لأندرويد في project.godot
+          if ! grep -q "\[rendering\]" project.godot; then
             echo "" >> project.godot
-            echo "[display]" >> project.godot
+            echo "[rendering]" >> project.godot
           fi
 
           cat << 'EOF' >> project.godot
 
-          [display.window]
-          size/viewport_width=320
-          size/viewport_height=224
-          size/window_width_override=720
-          size/window_height_override=1640
-          stretch/mode="canvas_items"
-          stretch/aspect="keep"
-
           [rendering]
           textures/vram_compression/import_etc2_astc=true
-          renderer/rendering_method="forward_plus"
+          renderer/rendering_method="mobile"
           EOF
 
       - name: Generate Clean Export Preset
