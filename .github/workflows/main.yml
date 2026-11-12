@@ -50,16 +50,19 @@ jobs:
           echo "${GODOT_VERSION}.stable" > "$TEMPLATE_DIR/version.txt"
           rm -rf temp_tpz Godot_v${GODOT_VERSION}*
 
-      - name: Fix Texture Import and Compression for Android
+      - name: Clear Cache and Force Re-import
         run: |
           if [ -f "project.godot.txt" ]; then
             mv project.godot.txt project.godot
           fi
 
-          # تعديل وضع ضغط الصور في جميع ملفات الـ import لمنع ظهور الخطوط والشبكة البيضاء
+          # حذف مجلد الكاش والملفات المؤقتة القديمة بالكامل لإجبار غودوت على إعادة التوليد
+          rm -rf .godot/imported .import
+
+          # تحديث وضع ضغط الصور في كافة ملفات الـ import لضمان التوافق مع أندرويد
           find . -name "*.import" -type f -exec sed -i 's/compress\/mode=0/compress\/mode=1/g' {} +
 
-          # إعدادات التصيير الإلزامية لأندرويد في project.godot
+          # ضبط إعدادات التصيير الإلزامية لمنع الخطوط البيضاء
           if ! grep -q "\[rendering\]" project.godot; then
             echo "" >> project.godot
             echo "[rendering]" >> project.godot
