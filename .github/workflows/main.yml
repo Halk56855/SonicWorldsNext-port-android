@@ -50,32 +50,28 @@ jobs:
           echo "${GODOT_VERSION}.stable" > "$TEMPLATE_DIR/version.txt"
           rm -rf temp_tpz Godot_v${GODOT_VERSION}*
 
-      - name: Fix Viewport Scaling & Remove White Grid in project.godot
+      - name: Fix Texture Repeat & Clear Cache for Android
         run: |
           if [ -f "project.godot.txt" ]; then
             mv project.godot.txt project.godot
           fi
 
-          # مسح الكاش القديم لتوليد خامات نظيفة
+          # مسح الكاش القديم بالكامل لإجبار غودوت على إعادة توليد الخامات نظيفة
           rm -rf .godot/imported .import
 
-          if ! grep -q "\[display\]" project.godot; then
+          # تعديل إعدادات تكرار الخامات في project.godot لتتوافق مع أندرويد وتمنع ظهور الشبكة البيضاء
+          sed -i 's/default_texture_repeat=1/default_texture_repeat=0/g' project.godot || true
+
+          if ! grep -q "\[rendering\]" project.godot; then
             echo "" >> project.godot
-            echo "[display]" >> project.godot
+            echo "[rendering]" >> project.godot
           fi
 
-          # ضبط إعدادات العرض لتغطية الشاشة وحل مشكلة الشبكة البيضاء
+          # إضافة إعدادات التوافق الرسومي
           cat << 'EOF' >> project.godot
-
-          [display.window]
-          size/viewport_width=426
-          size/viewport_height=240
-          stretch/mode="canvas_items"
-          stretch/aspect="expand"
 
           [rendering]
           textures/vram_compression/import_etc2_astc=true
-          renderer/rendering_method="mobile"
           EOF
 
       - name: Generate Clean Export Preset
