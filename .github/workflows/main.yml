@@ -50,28 +50,30 @@ jobs:
           echo "${GODOT_VERSION}.stable" > "$TEMPLATE_DIR/version.txt"
           rm -rf temp_tpz Godot_v${GODOT_VERSION}*
 
-      - name: Fix Texture Repeat & Clear Cache for Android
+      - name: Remove Glitched EdgePattern & Clear Cache
         run: |
           if [ -f "project.godot.txt" ]; then
             mv project.godot.txt project.godot
           fi
 
-          # مسح الكاش القديم بالكامل لإجبار غودوت على إعادة توليد الخامات نظيفة
+          # حذف ملف القالب الأبيض والأسود المسبب للشبكة البيضاء من جذوره
+          rm -f Graphics/HUD/LevelCards/EdgePattern.png
+          rm -f Graphics/HUD/LevelCards/EdgePattern.png.import
+
+          # مسح الكاش القديم بالكامل لإجبار غودوت على إعادة البناء نظيفاً
           rm -rf .godot/imported .import
 
-          # تعديل إعدادات تكرار الخامات في project.godot لتتوافق مع أندرويد وتمنع ظهور الشبكة البيضاء
-          sed -i 's/default_texture_repeat=1/default_texture_repeat=0/g' project.godot || true
-
+          # ضبط إعدادات التوافق الرسومي للـ Mobile
           if ! grep -q "\[rendering\]" project.godot; then
             echo "" >> project.godot
             echo "[rendering]" >> project.godot
           fi
 
-          # إضافة إعدادات التوافق الرسومي
           cat << 'EOF' >> project.godot
 
           [rendering]
           textures/vram_compression/import_etc2_astc=true
+          renderer/rendering_method="gl_compatibility"
           EOF
 
       - name: Generate Clean Export Preset
