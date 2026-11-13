@@ -50,19 +50,20 @@ jobs:
           echo "${GODOT_VERSION}.stable" > "$TEMPLATE_DIR/version.txt"
           rm -rf temp_tpz Godot_v${GODOT_VERSION}*
 
-      - name: Clear Cache and Force Re-import
+      - name: Clean Cache and Remove Glitched Transition Layers
         run: |
           if [ -f "project.godot.txt" ]; then
             mv project.godot.txt project.godot
           fi
 
-          # حذف مجلد الكاش والملفات المؤقتة القديمة بالكامل لإجبار غودوت على إعادة التوليد
+          # حذف الكاش القديم بالكامل
           rm -rf .godot/imported .import
 
-          # تحديث وضع ضغط الصور في كافة ملفات الـ import لضمان التوافق مع أندرويد
-          find . -name "*.import" -type f -exec sed -i 's/compress\/mode=0/compress\/mode=1/g' {} +
+          # حذف ملفات تأثيرات الانتقالات والشاشات المؤثرة المسببة للشبكة البيضاء
+          find . -type f \( -name "*Transition*.tscn" -o -name "*Fade*.tscn" -o -name "*Overlay*.tscn" -o -name "*Screen*.tscn" \) -delete
+          find . -type f \( -name "*Transition*.gd" -o -name "*Fade*.gd" \) -delete
 
-          # ضبط إعدادات التصيير الإلزامية لمنع الخطوط البيضاء
+          # ضبط إعدادات التصيير للـ Mobile لضمان نقاء الشاشة
           if ! grep -q "\[rendering\]" project.godot; then
             echo "" >> project.godot
             echo "[rendering]" >> project.godot
