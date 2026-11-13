@@ -50,26 +50,28 @@ jobs:
           echo "${GODOT_VERSION}.stable" > "$TEMPLATE_DIR/version.txt"
           rm -rf temp_tpz Godot_v${GODOT_VERSION}*
 
-      - name: Clean Cache and Remove Glitched Transition Layers
+      - name: Fix Viewport Scaling & Remove White Grid in project.godot
         run: |
           if [ -f "project.godot.txt" ]; then
             mv project.godot.txt project.godot
           fi
 
-          # حذف الكاش القديم بالكامل
+          # مسح الكاش القديم لتوليد خامات نظيفة
           rm -rf .godot/imported .import
 
-          # حذف ملفات تأثيرات الانتقالات والشاشات المؤثرة المسببة للشبكة البيضاء
-          find . -type f \( -name "*Transition*.tscn" -o -name "*Fade*.tscn" -o -name "*Overlay*.tscn" -o -name "*Screen*.tscn" \) -delete
-          find . -type f \( -name "*Transition*.gd" -o -name "*Fade*.gd" \) -delete
-
-          # ضبط إعدادات التصيير للـ Mobile لضمان نقاء الشاشة
-          if ! grep -q "\[rendering\]" project.godot; then
+          if ! grep -q "\[display\]" project.godot; then
             echo "" >> project.godot
-            echo "[rendering]" >> project.godot
+            echo "[display]" >> project.godot
           fi
 
+          # ضبط إعدادات العرض لتغطية الشاشة وحل مشكلة الشبكة البيضاء
           cat << 'EOF' >> project.godot
+
+          [display.window]
+          size/viewport_width=426
+          size/viewport_height=240
+          stretch/mode="canvas_items"
+          stretch/aspect="expand"
 
           [rendering]
           textures/vram_compression/import_etc2_astc=true
